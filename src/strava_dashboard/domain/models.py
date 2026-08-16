@@ -1,7 +1,8 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Literal
+from typing import ClassVar, Literal
 
 DataFamily = Literal["activities", "sleep", "recovery"]
 SyncStatus = Literal["succeeded", "failed"]
@@ -23,6 +24,11 @@ def _require_aware(name: str, value: datetime) -> None:
 def _require_non_negative(name: str, value: int | float) -> None:
     if value < 0:
         raise ValueError(f"{name} must be non-negative")
+
+
+def _require_non_negative_int(name: str, value: int) -> None:
+    if type(value) is not int or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,7 +61,7 @@ class Activity:
         _require_text("external_id", self.external_id)
         _require_text("activity_type", self.activity_type)
         _require_aware("started_at", self.started_at)
-        _require_non_negative("duration_seconds", self.duration_seconds)
+        _require_non_negative_int("duration_seconds", self.duration_seconds)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +77,7 @@ class SleepSession:
         _require_text("external_id", self.external_id)
         _require_aware("started_at", self.started_at)
         _require_aware("ended_at", self.ended_at)
-        _require_non_negative("duration_seconds", self.duration_seconds)
+        _require_non_negative_int("duration_seconds", self.duration_seconds)
         if self.ended_at <= self.started_at:
             raise ValueError("ended_at must be after started_at")
 
@@ -104,6 +110,36 @@ class SyncCursor:
 
 
 @dataclass(frozen=True, slots=True)
+class ActivityCursor:
+    watermark: datetime
+
+    data_family: ClassVar[Literal["activities"]] = "activities"
+
+    def __post_init__(self) -> None:
+        _require_aware("watermark", self.watermark)
+
+
+@dataclass(frozen=True, slots=True)
+class SleepCursor:
+    watermark: datetime
+
+    data_family: ClassVar[Literal["sleep"]] = "sleep"
+
+    def __post_init__(self) -> None:
+        _require_aware("watermark", self.watermark)
+
+
+@dataclass(frozen=True, slots=True)
+class RecoveryCursor:
+    watermark: datetime
+
+    data_family: ClassVar[Literal["recovery"]] = "recovery"
+
+    def __post_init__(self) -> None:
+        _require_aware("watermark", self.watermark)
+
+
+@dataclass(frozen=True, slots=True)
 class SyncStageResult:
     data_family: DataFamily
     status: SyncStatus
@@ -115,7 +151,7 @@ class SyncStageResult:
             raise ValueError("data_family must identify exactly one supported family")
         if self.status not in _SYNC_STATUSES:
             raise ValueError("status must be succeeded or failed")
-        _require_non_negative("record_count", self.record_count)
+        _require_non_negative_int("record_count", self.record_count)
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,9 +159,10 @@ class SyncRun:
     run_id: str
     started_at: datetime
     ended_at: datetime | None
-    stages: tuple[SyncStageResult, ...]
+    stages: Sequence[SyncStageResult]
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "stages", tuple(self.stages))
         _require_text("run_id", self.run_id)
         _require_aware("started_at", self.started_at)
         if self.ended_at is not None:
@@ -142,8 +179,13 @@ class TrainingSummary:
     duration_seconds: int
     distance_meters: float
     elevation_meters: float
-    sport_counts: tuple[tuple[str, int], ...]
+    sport_counts: Sequence[Sequence[str | int]]
     training_load: float | None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "sport_counts", tuple(tuple(item) for item in self.sport_counts))
+        _require_non_negative_int("activity_count", self.activity_count)
+        _require_non_negative_int("duration_seconds", self.duration_seconds)
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,7 +195,10 @@ class HealthSummary:
     available: bool
     average_sleep_seconds: float | None
     average_sleep_score: float | None
-    recovery_metrics: tuple[tuple[str, float, str], ...]
+    recovery_metrics: Sequence[Sequence[str | float]]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "recovery_metrics", tuple(tuple(item) for item in self.recovery_metrics))
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,8 +206,11 @@ class TrainingBlock:
     start: date
     end: date
     outcome: Activity
-    activities: tuple[Activity, ...]
+    activities: Sequence[Activity]
     summary: TrainingSummary
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "activities", tuple(self.activities))
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,9 +218,10 @@ class DashboardSnapshot:
     generated_at: datetime
     training: TrainingSummary
     health: HealthSummary
-    recent_activities: tuple[Activity, ...]
+    recent_activities: Sequence[Activity]
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "recent_activities", tuple(self.recent_activities))
         _require_aware("generated_at", self.generated_at)
 
 
@@ -187,5 +236,9 @@ class TrendSnapshot:
     start: date
     end: date
     bucket: TrendBucket
-    training: tuple[TrainingSummary, ...]
-    health: tuple[HealthSummary, ...]
+    training: Sequence[TrainingSummary]
+    health: Sequence[HealthSummary]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "training", tuple(self.training))
+        object.__setattr__(self, "health", tuple(self.health))

@@ -55,3 +55,40 @@ Only the Task 2 files and this report are intended for the commit:
 - `src/strava_dashboard/ports/coach.py`
 - `tests/conftest.py`
 - `tests/test_domain_models.py`
+
+## Task 2 review-fix report
+
+Fixed all three review findings on HEAD `d4c851d`:
+
+1. Added strict non-negative integer validation for duration and count fields.
+   Fractional values, `NaN`, negative values, and booleans are rejected rather
+   than passing through numeric comparisons. Regression coverage includes
+   activity/sleep durations and sync record counts.
+2. Normalized mutable collection inputs to tuples in `__post_init__` across
+   sync runs, summaries, dashboard/trend snapshots, training blocks, plan
+   constraints, and plan proposals. Nested summary collections are normalized
+   to tuples as well. Runtime regression coverage verifies tuple storage.
+3. Added immutable `ActivityCursor`, `SleepCursor`, and `RecoveryCursor`
+   value types with literal family ownership. Each storage port now accepts
+   and returns only its matching cursor type, leaving the contract ready for
+   independent SQLite-backed implementations. Regression coverage checks the
+   protocol annotations.
+
+## Fix verification
+
+Commands run separately, in the requested order:
+
+| Command | Result |
+| --- | --- |
+| `uv run pytest tests/test_domain_models.py -q` | 37 passed |
+| `uv run pytest -q` | 42 passed |
+| `uv run ruff format --check .` | 11 files already formatted |
+| `uv run ruff check .` | All checks passed! |
+| `uv run ty check .` | All checks passed! |
+
+Docker was unavailable and was not used. No Docker wait or Compose check was
+performed.
+
+## Fix commit
+
+Commit message: `fix: address Task 2 review findings`.

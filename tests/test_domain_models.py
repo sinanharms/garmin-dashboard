@@ -1,19 +1,26 @@
 from dataclasses import FrozenInstanceError
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import get_args, get_type_hints
 
 import pytest
 
 from strava_dashboard.domain.models import (
     Activity,
+    DashboardSnapshot,
+    HealthSummary,
     RecoverySignal,
     SleepSession,
     SyncCursor,
     SyncRun,
     SyncStageResult,
     SyncWindow,
+    TrainingBlock,
+    TrainingSummary,
+    TrendBucket,
+    TrendSnapshot,
 )
-from strava_dashboard.domain.plan_models import Goal, PlanProposal, Workout
+from strava_dashboard.domain.plan_models import Goal, PlanConstraints, PlanProposal, Workout
 
 
 def activity(utc_now: datetime, **changes: object) -> Activity:
@@ -70,6 +77,13 @@ def test_activity_rejects_empty_identity_fields(utc_now: datetime, field: str, v
 def test_duration_must_be_non_negative(utc_now: datetime, factory) -> None:
     with pytest.raises(ValueError):
         factory(utc_now, duration_seconds=-1)
+
+
+@pytest.mark.parametrize("value", [1.5, float("nan")])
+@pytest.mark.parametrize("factory", [activity, sleep])
+def test_duration_must_be_a_non_negative_integer(utc_now: datetime, factory, value: float) -> None:
+    with pytest.raises(ValueError):
+        factory(utc_now, duration_seconds=value)
 
 
 @pytest.mark.parametrize(
@@ -136,6 +150,12 @@ def test_sync_records_validate_counts_ids_and_timestamps(utc_now: datetime) -> N
         SyncRun(run_id="run-1", started_at=utc_now, ended_at=utc_now - timedelta(seconds=1), stages=())
 
 
+@pytest.mark.parametrize("value", [1.5, float("nan"), -1])
+def test_sync_record_count_must_be_a_non_negative_integer(utc_now: datetime, value: float) -> None:
+    with pytest.raises(ValueError):
+        SyncStageResult(data_family="activities", status="succeeded", record_count=value, error_code=None)  # ty: ignore[invalid-argument-type]
+
+
 def test_domain_records_are_frozen_and_slotted(utc_now: datetime) -> None:
     record = activity(utc_now)
 
@@ -177,6 +197,60 @@ def test_plan_records_validate_required_values(utc_now: datetime) -> None:
         )
 
 
+def test_frozen_collections_are_runtime_immutable(utc_now: datetime) -> None:
+    stage = SyncStageResult(data_family="activities", status="succeeded", record_count=1, error_code=None)
+    training = TrainingSummary(  # type: ignore[call-arg]
+        start=date(2026, 8, 1),
+        end=date(2026, 8, 7),
+        activity_count=1,
+        duration_seconds=1800,
+        distance_meters=5.0,
+        elevation_meters=30.0,
+        sport_counts=[["running", 1]],
+        training_load=None,
+    )
+    health = HealthSummary(  # type: ignore[call-arg]
+        start=training.start,
+        end=training.end,
+        available=True,
+        average_sleep_seconds=28800.0,
+        average_sleep_score=82.0,
+        recovery_metrics=[["body_battery", 75.0, "percent"]],
+    )
+    workout = Workout(
+        workout_id="workout-1",
+        scheduled_date=date(2026, 8, 17),
+        activity_type="running",
+        duration_seconds=2400,
+        intensity="easy",
+        purpose="Aerobic base",
+        explanation="Build volume safely",
+    )
+    constraints = PlanConstraints(6000, [0, 2], ["running"], ["easy week"])
+    proposal = PlanProposal("proposal-1", "goal-1", training.start, [workout], "One easy session", utc_now)
+    run = SyncRun("run-1", utc_now, None, [stage])
+    block = TrainingBlock(training.start, training.end, activity(utc_now), [activity(utc_now)], training)
+    dashboard = DashboardSnapshot(utc_now, training, health, [activity(utc_now)])
+    trend = TrendSnapshot(training.start, training.end, TrendBucket.WEEK, [training], [health])
+
+    assert all(
+        isinstance(value, tuple)
+        for value in (
+            run.stages,
+            training.sport_counts,
+            health.recovery_metrics,
+            constraints.available_weekdays,
+            constraints.activity_preferences,
+            constraints.requirements,
+            proposal.workouts,
+            block.activities,
+            dashboard.recent_activities,
+            trend.training,
+            trend.health,
+        )
+    )
+
+
 def test_ports_expose_replaceable_protocols() -> None:
     from strava_dashboard.ports.coach import CoachProvider
     from strava_dashboard.ports.garmin import GarminDataSource
@@ -205,6 +279,18 @@ def test_ports_expose_replaceable_protocols() -> None:
     for protocol, methods in protocols.items():
         assert protocol._is_protocol  # ty: ignore[unresolved-attribute]
         assert methods <= set(protocol.__dict__)
+
+
+def test_storage_ports_own_their_cursor_family() -> None:
+    from strava_dashboard.domain.models import ActivityCursor, RecoveryCursor, SleepCursor
+    from strava_dashboard.ports.storage import ActivityStore, RecoveryStore, SleepStore
+
+    assert ActivityCursor in get_args(get_type_hints(ActivityStore.cursor)["return"])
+    assert get_type_hints(ActivityStore.upsert_batch)["cursor"] is ActivityCursor
+    assert SleepCursor in get_args(get_type_hints(SleepStore.cursor)["return"])
+    assert get_type_hints(SleepStore.upsert_batch)["cursor"] is SleepCursor
+    assert RecoveryCursor in get_args(get_type_hints(RecoveryStore.cursor)["return"])
+    assert get_type_hints(RecoveryStore.upsert_batch)["cursor"] is RecoveryCursor
 
 
 def test_domain_and_ports_have_no_framework_provider_or_storage_imports() -> None:

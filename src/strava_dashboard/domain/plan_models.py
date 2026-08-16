@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 
@@ -6,7 +7,7 @@ from strava_dashboard.domain.models import (
     TrainingBlock,
     TrainingSummary,
     _require_aware,
-    _require_non_negative,
+    _require_non_negative_int,
     _require_text,
 )
 
@@ -38,18 +39,21 @@ class Workout:
         _require_text("intensity", self.intensity)
         _require_text("purpose", self.purpose)
         _require_text("explanation", self.explanation)
-        _require_non_negative("duration_seconds", self.duration_seconds)
+        _require_non_negative_int("duration_seconds", self.duration_seconds)
 
 
 @dataclass(frozen=True, slots=True)
 class PlanConstraints:
     weekly_time_budget_seconds: int
-    available_weekdays: tuple[int, ...]
-    activity_preferences: tuple[str, ...]
-    requirements: tuple[str, ...]
+    available_weekdays: Sequence[int]
+    activity_preferences: Sequence[str]
+    requirements: Sequence[str]
 
     def __post_init__(self) -> None:
-        _require_non_negative("weekly_time_budget_seconds", self.weekly_time_budget_seconds)
+        object.__setattr__(self, "available_weekdays", tuple(self.available_weekdays))
+        object.__setattr__(self, "activity_preferences", tuple(self.activity_preferences))
+        object.__setattr__(self, "requirements", tuple(self.requirements))
+        _require_non_negative_int("weekly_time_budget_seconds", self.weekly_time_budget_seconds)
         if any(day < 0 or day > 6 for day in self.available_weekdays):
             raise ValueError("available_weekdays must contain values from 0 through 6")
 
@@ -59,11 +63,12 @@ class PlanProposal:
     proposal_id: str
     goal_id: str
     week_start: date
-    workouts: tuple[Workout, ...]
+    workouts: Sequence[Workout]
     explanation: str
     created_at: datetime
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "workouts", tuple(self.workouts))
         _require_text("proposal_id", self.proposal_id)
         _require_text("goal_id", self.goal_id)
         _require_text("explanation", self.explanation)

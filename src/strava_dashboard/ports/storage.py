@@ -2,14 +2,22 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 
-from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession, SyncCursor, SyncRun
+from strava_dashboard.domain.models import (
+    Activity,
+    ActivityCursor,
+    RecoveryCursor,
+    RecoverySignal,
+    SleepCursor,
+    SleepSession,
+    SyncRun,
+)
 from strava_dashboard.domain.plan_models import Goal, ValidatedPlan
 
 
 class ActivityStore(Protocol):
-    def cursor(self) -> SyncCursor | None: ...
+    def cursor(self) -> ActivityCursor | None: ...
 
-    def upsert_batch(self, records: Sequence[Activity], cursor: SyncCursor) -> int:
+    def upsert_batch(self, records: Sequence[Activity], cursor: ActivityCursor) -> int:
         """Persist records and advance their cursor atomically."""
         ...
 
@@ -17,9 +25,9 @@ class ActivityStore(Protocol):
 
 
 class SleepStore(Protocol):
-    def cursor(self) -> SyncCursor | None: ...
+    def cursor(self) -> SleepCursor | None: ...
 
-    def upsert_batch(self, records: Sequence[SleepSession], cursor: SyncCursor) -> int:
+    def upsert_batch(self, records: Sequence[SleepSession], cursor: SleepCursor) -> int:
         """Persist records and advance their cursor atomically."""
         ...
 
@@ -27,9 +35,9 @@ class SleepStore(Protocol):
 
 
 class RecoveryStore(Protocol):
-    def cursor(self) -> SyncCursor | None: ...
+    def cursor(self) -> RecoveryCursor | None: ...
 
-    def upsert_batch(self, records: Sequence[RecoverySignal], cursor: SyncCursor) -> int:
+    def upsert_batch(self, records: Sequence[RecoverySignal], cursor: RecoveryCursor) -> int:
         """Persist records and advance their cursor atomically."""
         ...
 
