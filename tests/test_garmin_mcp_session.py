@@ -1,5 +1,6 @@
 import asyncio
 import json
+import traceback
 from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -15,6 +16,7 @@ from strava_dashboard.adapters.garmin_mcp.session import McpSessionError, StdioM
 
 class FakeSdkSession:
     response: object = SimpleNamespace(is_error=False, content=[], structured_content={"ok": True})
+    initialize_error: Exception | None = None
     close_error: Exception | None = None
     captured: dict[str, Any]
 
@@ -31,6 +33,8 @@ class FakeSdkSession:
 
     async def initialize(self) -> None:
         self.captured["initialized"] = True
+        if self.initialize_error is not None:
+            raise self.initialize_error
 
     async def call_tool(self, name: str, arguments: dict[str, object]) -> object:
         return self.response
@@ -48,6 +52,7 @@ def install_stdio_fakes(monkeypatch: pytest.MonkeyPatch, captured: dict[str, Any
 
     FakeSdkSession.captured = captured
     FakeSdkSession.response = SimpleNamespace(is_error=False, content=[], structured_content={"ok": True})
+    FakeSdkSession.initialize_error = None
     FakeSdkSession.close_error = None
     monkeypatch.setattr(session_module, "stdio_client", fake_stdio)
     monkeypatch.setattr(session_module, "ClientSession", FakeSdkSession)
@@ -126,6 +131,22 @@ def test_close_terminates_transport_when_graceful_close_fails(monkeypatch: pytes
 
     assert captured["transport_closed"]
     assert "RAW-HEALTH-SECRET" not in str(error.value)
+
+
+def test_startup_error_wins_when_cleanup_also_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    captured: dict[str, Any] = {}
+    install_stdio_fakes(monkeypatch, captured)
+    initialize_error = RuntimeError("RAW-INITIALIZE-ERROR")
+    FakeSdkSession.initialize_error = initialize_error
+    FakeSdkSession.close_error = RuntimeError("RAW-CLEANUP-ERROR")
+
+    with pytest.raises(McpSessionError) as error:
+        asyncio.run(StdioMcpSessionFactory("garmin-mcp", tmp_path / "tokens", 30).open())
+
+    assert str(error.value) == "MCP session startup failed"
+    assert error.value.__cause__ is initialize_error
+    assert "RAW-CLEANUP-ERROR" not in "".join(traceback.format_exception(error.value))
+    assert captured["transport_closed"]
 
 
 def test_stdio_session_times_out_without_exposing_sdk_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

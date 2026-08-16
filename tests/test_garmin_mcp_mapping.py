@@ -1,30 +1,36 @@
+import json
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 from strava_dashboard.adapters.garmin_mcp import mapping
 from strava_dashboard.adapters.garmin_mcp.mapping import GarminDataError
 
+SCHEMA_SNAPSHOT = Path(__file__).parent / "fixtures" / "garmin_mcp_list_tools_schema.json"
+
 
 def test_tool_contracts_match_verified_upstream_schema() -> None:
+    snapshot = cast(dict[str, dict[str, Any]], json.loads(SCHEMA_SNAPSHOT.read_text()))
+    contracts = (mapping.ACTIVITIES_CONTRACT, mapping.SLEEP_CONTRACT, mapping.HRV_CONTRACT)
+
     assert mapping.GARMIN_MCP_SCHEMA_COMMIT == "3610be6feed93088d85b0f35aba9d7d07c2505a7"
-    assert {
-        contract.name: tuple(argument.model_dump() for argument in contract.arguments)
-        for contract in (mapping.ACTIVITIES_CONTRACT, mapping.SLEEP_CONTRACT, mapping.HRV_CONTRACT)
-    } == {
-        "get_activities_by_date": (
-            {"name": "start_date", "json_type": "string", "required": True, "default": None},
-            {"name": "end_date", "json_type": "string", "required": True, "default": None},
-            {"name": "activity_type", "json_type": "string", "required": False, "default": ""},
-            {"name": "page", "json_type": "integer", "required": False, "default": 0},
-            {"name": "page_size", "json_type": "integer", "required": False, "default": 100},
-        ),
-        "get_sleep_summary": ({"name": "date", "json_type": "string", "required": True, "default": None},),
-        "get_hrv_data": (
-            {"name": "date", "json_type": "string", "required": True, "default": None},
-            {"name": "return_timeseries", "json_type": "boolean", "required": False, "default": False},
-        ),
-    }
+    assert set(snapshot) == {contract.name for contract in contracts}
+    for contract in contracts:
+        schema = snapshot[contract.name]
+        properties = cast(dict[str, dict[str, object]], schema["properties"])
+        required = cast(list[str], schema["required"])
+        discovered = {
+            name: {
+                "name": name,
+                "json_type": definition["type"],
+                "required": name in required,
+                "default": definition.get("default"),
+            }
+            for name, definition in properties.items()
+        }
+        assert discovered == {argument.name: argument.model_dump() for argument in contract.arguments}
 
 
 def test_map_recovery_returns_only_present_numeric_metrics() -> None:

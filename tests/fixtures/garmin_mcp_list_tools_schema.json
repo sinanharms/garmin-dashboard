@@ -1,0 +1,66 @@
+{
+  "get_activities_by_date": {
+    "properties": {
+      "activity_type": {
+        "default": "",
+        "title": "Activity Type",
+        "type": "string"
+      },
+      "end_date": {
+        "title": "End Date",
+        "type": "string"
+      },
+      "page": {
+        "default": 0,
+        "title": "Page",
+        "type": "integer"
+      },
+      "page_size": {
+        "default": 100,
+        "title": "Page Size",
+        "type": "integer"
+      },
+      "start_date": {
+        "title": "Start Date",
+        "type": "string"
+      }
+    },
+    "required": [
+      "start_date",
+      "end_date"
+    ],
+    "title": "get_activities_by_dateArguments",
+    "type": "object"
+  },
+  "get_hrv_data": {
+    "properties": {
+      "date": {
+        "title": "Date",
+        "type": "string"
+      },
+      "return_timeseries": {
+        "default": false,
+        "title": "Return Timeseries",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "date"
+    ],
+    "title": "get_hrv_dataArguments",
+    "type": "object"
+  },
+  "get_sleep_summary": {
+    "properties": {
+      "date": {
+        "title": "Date",
+        "type": "string"
+      }
+    },
+    "required": [
+      "date"
+    ],
+    "title": "get_sleep_summaryArguments",
+    "type": "object"
+  }
+}

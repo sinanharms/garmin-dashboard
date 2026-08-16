@@ -7,3 +7,5 @@ Create `.env` locally with Garmin credentials before running Compose. Never comm
 Run focused checks with `docker compose run --rm app uv run pytest tests/test_config.py -q`, then run the full relevant test suite with `docker compose run --rm app uv run pytest -q`. Validate the Compose definition with `docker compose config`.
 
 Keep runtime configuration in `strava_dashboard.config.Settings`, preserve explicit environment aliases, and keep source files under 300 lines.
+
+Use Pydantic v2 `BaseModel` for all domain, port, application, API, and adapter data models. Configure immutable models with `ConfigDict(frozen=True)` and use tuple-typed collections where runtime immutability is required. Do not introduce dataclasses for application data.

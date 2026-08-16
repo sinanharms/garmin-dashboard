@@ -99,6 +99,9 @@ class GarminMcpAdapter(GarminDataSource):
         except Exception as error:
             primary_error = GarminDataError("Garmin MCP response mapping failed")
             raise primary_error from error
+        except BaseException as error:
+            primary_error = error
+            raise
         finally:
             try:
                 await session.close()

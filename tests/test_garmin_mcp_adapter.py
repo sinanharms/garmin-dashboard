@@ -25,7 +25,7 @@ class FakeSession:
     def __init__(
         self,
         responses: Mapping[str, Mapping[str, object] | str | list[Mapping[str, object]] | list[str]],
-        error: Exception | None = None,
+        error: BaseException | None = None,
         close_error: Exception | None = None,
     ) -> None:
         self.responses = responses
@@ -281,3 +281,18 @@ def test_session_close_error_does_not_replace_primary_error() -> None:
         asyncio.run(GarminMcpAdapter(FakeSessionFactory(session)).fetch_sleep(sync_window()))
 
     assert str(error.value) == "Garmin MCP request failed"
+
+
+def test_session_close_error_does_not_replace_cancellation() -> None:
+    cancellation = asyncio.CancelledError()
+    session = FakeSession(
+        {"get_sleep_summary": "No sleep summary found for 2024-01-15"},
+        error=cancellation,
+        close_error=McpSessionError("RAW-SESSION-ERROR"),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as error:
+        asyncio.run(GarminMcpAdapter(FakeSessionFactory(session)).fetch_sleep(sync_window()))
+
+    assert error.value is cancellation
+    assert session.closed

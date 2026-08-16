@@ -3,7 +3,7 @@ import json
 import os
 import sys
 from collections.abc import Mapping
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, suppress
 from pathlib import Path
 from typing import Protocol, cast
 
@@ -44,8 +44,10 @@ class StdioMcpSessionFactory:
             await sdk_session.initialize()
             return _SdkMcpSession(stack, sdk_session, self._timeout_seconds)
         except Exception as error:
-            await stack.aclose()
-            raise McpSessionError("MCP session startup failed") from error
+            startup_error = McpSessionError("MCP session startup failed")
+            with suppress(Exception):
+                await stack.aclose()
+            raise startup_error from error
 
 
 class _SdkMcpSession:
@@ -93,7 +95,7 @@ def _result_mapping(response: object, tool_name: str) -> Mapping[str, object] | 
         raise McpSessionError("MCP tool returned malformed content")
     try:
         decoded = json.loads(item.text)
-    except (TypeError, json.JSONDecodeError):
+    except TypeError, json.JSONDecodeError:
         if tool_name == "get_sleep_summary" and item.text.startswith("No sleep summary found"):
             return item.text
         if tool_name == "get_hrv_data" and item.text.startswith("No HRV data found"):

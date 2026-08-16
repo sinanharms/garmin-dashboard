@@ -6,6 +6,11 @@ from pydantic import BaseModel, ConfigDict
 
 from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession
 
+# Discovered through official ClientSession.initialize() + list_tools(). Exact
+# output lives in tests/fixtures/garmin_mcp_list_tools_schema.json. At this
+# commit: activities require start_date/end_date and optionally accept
+# activity_type/page/page_size; sleep requires date; HRV requires date and
+# optionally accepts return_timeseries.
 GARMIN_MCP_SCHEMA_COMMIT = "3610be6feed93088d85b0f35aba9d7d07c2505a7"
 PAGE_SIZE = 200
 HRV_METRICS = (
