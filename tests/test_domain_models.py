@@ -1,15 +1,17 @@
-from dataclasses import FrozenInstanceError
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
-from typing import get_args, get_type_hints
 
 import pytest
+from pydantic import BaseModel, ValidationError
 
 from strava_dashboard.domain.models import (
     Activity,
+    ActivityCursor,
     DashboardSnapshot,
+    DomainModel,
     HealthSummary,
+    RecoveryCursor,
     RecoverySignal,
+    SleepCursor,
     SleepSession,
     SyncCursor,
     SyncRun,
@@ -37,7 +39,7 @@ def activity(utc_now: datetime, **changes: object) -> Activity:
         "calories": 350.0,
     }
     values.update(changes)
-    return Activity(**values)
+    return Activity.model_validate(values)
 
 
 def sleep(utc_now: datetime, **changes: object) -> SleepSession:
@@ -50,7 +52,7 @@ def sleep(utc_now: datetime, **changes: object) -> SleepSession:
         "score": 82.0,
     }
     values.update(changes)
-    return SleepSession(**values)
+    return SleepSession.model_validate(values)
 
 
 def recovery(utc_now: datetime, **changes: object) -> RecoverySignal:
@@ -63,26 +65,26 @@ def recovery(utc_now: datetime, **changes: object) -> RecoverySignal:
         "unit": "percent",
     }
     values.update(changes)
-    return RecoverySignal(**values)
+    return RecoverySignal.model_validate(values)
 
 
 @pytest.mark.parametrize("field", ["external_id", "activity_type"])
 @pytest.mark.parametrize("value", ["", "   "])
 def test_activity_rejects_empty_identity_fields(utc_now: datetime, field: str, value: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         activity(utc_now, **{field: value})
 
 
 @pytest.mark.parametrize("factory", [activity, sleep])
 def test_duration_must_be_non_negative(utc_now: datetime, factory) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         factory(utc_now, duration_seconds=-1)
 
 
-@pytest.mark.parametrize("value", [1.5, float("nan")])
+@pytest.mark.parametrize("value", [True, 1.5, float("nan"), float("inf"), "1"])
 @pytest.mark.parametrize("factory", [activity, sleep])
-def test_duration_must_be_a_non_negative_integer(utc_now: datetime, factory, value: float) -> None:
-    with pytest.raises(ValueError):
+def test_duration_must_be_a_strict_finite_non_negative_integer(utc_now: datetime, factory, value: object) -> None:
+    with pytest.raises(ValidationError):
         factory(utc_now, duration_seconds=value)
 
 
@@ -96,7 +98,7 @@ def test_duration_must_be_a_non_negative_integer(utc_now: datetime, factory, val
     ],
 )
 def test_source_timestamps_must_be_timezone_aware(utc_now: datetime, factory, field: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         factory(utc_now, **{field: utc_now.replace(tzinfo=None)})
 
 
@@ -111,14 +113,14 @@ def test_source_timestamp_timezone_is_preserved(utc_now: datetime) -> None:
 
 
 def test_sleep_must_end_after_it_starts(utc_now: datetime) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         sleep(utc_now, ended_at=utc_now)
 
 
 @pytest.mark.parametrize("field", ["external_id", "metric_name", "unit"])
 @pytest.mark.parametrize("value", ["", "   "])
 def test_recovery_requires_metric_identity_and_unit(utc_now: datetime, field: str, value: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         recovery(utc_now, **{field: value})
 
 
@@ -130,38 +132,55 @@ def test_sync_cursor_belongs_to_one_supported_data_family(utc_now: datetime, dat
 
 
 def test_sync_cursor_rejects_unknown_or_combined_data_family(utc_now: datetime) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         SyncCursor(data_family="activities,sleep", watermark=utc_now)  # ty: ignore[invalid-argument-type]
 
 
+@pytest.mark.parametrize(
+    ("cursor_type", "data_family"),
+    [(ActivityCursor, "activities"), (SleepCursor, "sleep"), (RecoveryCursor, "recovery")],
+)
+def test_family_cursor_accepts_only_its_data_family(utc_now: datetime, cursor_type, data_family: str) -> None:
+    cursor = cursor_type.model_validate({"data_family": data_family, "watermark": utc_now})
+
+    assert cursor.data_family == data_family
+    with pytest.raises(ValidationError):
+        cursor_type.model_validate({"data_family": "wrong", "watermark": utc_now})
+
+
 def test_sync_window_validates_timestamps_and_order(utc_now: datetime) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         SyncWindow(start=utc_now, end=utc_now)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         SyncWindow(start=None, end=utc_now.replace(tzinfo=None))
 
 
 def test_sync_records_validate_counts_ids_and_timestamps(utc_now: datetime) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         SyncStageResult(data_family="activities", status="succeeded", record_count=-1, error_code=None)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         SyncRun(run_id=" ", started_at=utc_now, ended_at=None, stages=())
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         SyncRun(run_id="run-1", started_at=utc_now, ended_at=utc_now - timedelta(seconds=1), stages=())
 
 
-@pytest.mark.parametrize("value", [1.5, float("nan"), -1])
-def test_sync_record_count_must_be_a_non_negative_integer(utc_now: datetime, value: float) -> None:
-    with pytest.raises(ValueError):
+@pytest.mark.parametrize("value", [True, 1.5, float("nan"), float("inf"), "1", -1])
+def test_sync_record_count_must_be_a_strict_finite_non_negative_integer(utc_now: datetime, value: object) -> None:
+    with pytest.raises(ValidationError):
         SyncStageResult(data_family="activities", status="succeeded", record_count=value, error_code=None)  # ty: ignore[invalid-argument-type]
 
 
-def test_domain_records_are_frozen_and_slotted(utc_now: datetime) -> None:
+def test_domain_records_share_frozen_extra_forbid_pydantic_config(utc_now: datetime) -> None:
     record = activity(utc_now)
 
-    with pytest.raises(FrozenInstanceError):
-        record.duration_seconds = 1  # ty: ignore[invalid-assignment]
-    assert not hasattr(record, "__dict__")
+    assert isinstance(record, BaseModel)
+    assert issubclass(Activity, DomainModel)
+    assert record.model_config["frozen"] is True
+    assert record.model_config["extra"] == "forbid"
+    with pytest.raises(ValidationError):
+        record.duration_seconds = 1
+    with pytest.raises(ValidationError):
+        Activity.model_validate({**record.model_dump(), "unexpected": "value"})
 
 
 def test_plan_records_validate_required_values(utc_now: datetime) -> None:
@@ -185,7 +204,7 @@ def test_plan_records_validate_required_values(utc_now: datetime) -> None:
     )
 
     assert proposal.workouts == (workout,)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         Workout(
             workout_id="workout-2",
             scheduled_date=date(2026, 8, 18),
@@ -199,23 +218,23 @@ def test_plan_records_validate_required_values(utc_now: datetime) -> None:
 
 def test_frozen_collections_are_runtime_immutable(utc_now: datetime) -> None:
     stage = SyncStageResult(data_family="activities", status="succeeded", record_count=1, error_code=None)
-    training = TrainingSummary(  # type: ignore[call-arg]
+    training = TrainingSummary(
         start=date(2026, 8, 1),
         end=date(2026, 8, 7),
         activity_count=1,
         duration_seconds=1800,
         distance_meters=5.0,
         elevation_meters=30.0,
-        sport_counts=[["running", 1]],
+        sport_counts=[["running", 1]],  # ty: ignore[invalid-argument-type]
         training_load=None,
     )
-    health = HealthSummary(  # type: ignore[call-arg]
+    health = HealthSummary(
         start=training.start,
         end=training.end,
         available=True,
         average_sleep_seconds=28800.0,
         average_sleep_score=82.0,
-        recovery_metrics=[["body_battery", 75.0, "percent"]],
+        recovery_metrics=[["body_battery", 75.0, "percent"]],  # ty: ignore[invalid-argument-type]
     )
     workout = Workout(
         workout_id="workout-1",
@@ -226,12 +245,41 @@ def test_frozen_collections_are_runtime_immutable(utc_now: datetime) -> None:
         purpose="Aerobic base",
         explanation="Build volume safely",
     )
-    constraints = PlanConstraints(6000, [0, 2], ["running"], ["easy week"])
-    proposal = PlanProposal("proposal-1", "goal-1", training.start, [workout], "One easy session", utc_now)
-    run = SyncRun("run-1", utc_now, None, [stage])
-    block = TrainingBlock(training.start, training.end, activity(utc_now), [activity(utc_now)], training)
-    dashboard = DashboardSnapshot(utc_now, training, health, [activity(utc_now)])
-    trend = TrendSnapshot(training.start, training.end, TrendBucket.WEEK, [training], [health])
+    constraints = PlanConstraints(
+        weekly_time_budget_seconds=6000,
+        available_weekdays=[0, 2],  # ty: ignore[invalid-argument-type]
+        activity_preferences=["running"],  # ty: ignore[invalid-argument-type]
+        requirements=["easy week"],  # ty: ignore[invalid-argument-type]
+    )
+    proposal = PlanProposal(
+        proposal_id="proposal-1",
+        goal_id="goal-1",
+        week_start=training.start,
+        workouts=[workout],  # ty: ignore[invalid-argument-type]
+        explanation="One easy session",
+        created_at=utc_now,
+    )
+    run = SyncRun(run_id="run-1", started_at=utc_now, ended_at=None, stages=[stage])  # ty: ignore[invalid-argument-type]
+    block = TrainingBlock(
+        start=training.start,
+        end=training.end,
+        outcome=activity(utc_now),
+        activities=[activity(utc_now)],  # ty: ignore[invalid-argument-type]
+        summary=training,
+    )
+    dashboard = DashboardSnapshot(
+        generated_at=utc_now,
+        training=training,
+        health=health,
+        recent_activities=[activity(utc_now)],  # ty: ignore[invalid-argument-type]
+    )
+    trend = TrendSnapshot(
+        start=training.start,
+        end=training.end,
+        bucket=TrendBucket.WEEK,
+        training=[training],  # ty: ignore[invalid-argument-type]
+        health=[health],  # ty: ignore[invalid-argument-type]
+    )
 
     assert all(
         isinstance(value, tuple)
@@ -249,61 +297,3 @@ def test_frozen_collections_are_runtime_immutable(utc_now: datetime) -> None:
             trend.health,
         )
     )
-
-
-def test_ports_expose_replaceable_protocols() -> None:
-    from strava_dashboard.ports.coach import CoachProvider
-    from strava_dashboard.ports.garmin import GarminDataSource
-    from strava_dashboard.ports.storage import (
-        ActivityStore,
-        BackupStore,
-        GoalStore,
-        PlanStore,
-        RecoveryStore,
-        SleepStore,
-        SyncRunStore,
-    )
-
-    protocols = {
-        GarminDataSource: {"fetch_activities", "fetch_sleep", "fetch_recovery"},
-        ActivityStore: {"cursor", "upsert_batch", "between"},
-        SleepStore: {"cursor", "upsert_batch", "between"},
-        RecoveryStore: {"cursor", "upsert_batch", "between"},
-        SyncRunStore: {"save", "get", "recent"},
-        GoalStore: {"save", "current"},
-        PlanStore: {"save", "current"},
-        BackupStore: {"create", "restore", "delete"},
-        CoachProvider: {"propose"},
-    }
-
-    for protocol, methods in protocols.items():
-        assert protocol._is_protocol  # ty: ignore[unresolved-attribute]
-        assert methods <= set(protocol.__dict__)
-
-
-def test_storage_ports_own_their_cursor_family() -> None:
-    from strava_dashboard.domain.models import ActivityCursor, RecoveryCursor, SleepCursor
-    from strava_dashboard.ports.storage import ActivityStore, RecoveryStore, SleepStore
-
-    assert ActivityCursor in get_args(get_type_hints(ActivityStore.cursor)["return"])
-    assert get_type_hints(ActivityStore.upsert_batch)["cursor"] is ActivityCursor
-    assert SleepCursor in get_args(get_type_hints(SleepStore.cursor)["return"])
-    assert get_type_hints(SleepStore.upsert_batch)["cursor"] is SleepCursor
-    assert RecoveryCursor in get_args(get_type_hints(RecoveryStore.cursor)["return"])
-    assert get_type_hints(RecoveryStore.upsert_batch)["cursor"] is RecoveryCursor
-
-
-def test_domain_and_ports_have_no_framework_provider_or_storage_imports() -> None:
-    project_root = Path(__file__).parents[1]
-    files = (
-        project_root / "src/strava_dashboard/domain/models.py",
-        project_root / "src/strava_dashboard/domain/plan_models.py",
-        project_root / "src/strava_dashboard/ports/garmin.py",
-        project_root / "src/strava_dashboard/ports/storage.py",
-        project_root / "src/strava_dashboard/ports/coach.py",
-    )
-    forbidden = ("fastapi", "pydantic", "sqlite", "mcp", "openai", "anthropic")
-
-    for path in files:
-        source = path.read_text().lower()
-        assert not any(name in source for name in forbidden), path

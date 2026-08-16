@@ -65,12 +65,12 @@ Fixed all three review findings on HEAD `d4c851d`:
    than passing through numeric comparisons. Regression coverage includes
    activity/sleep durations and sync record counts.
 2. Normalized mutable collection inputs to tuples in `__post_init__` across
-   sync runs, summaries, dashboard/trend snapshots, training blocks, plan
-   constraints, and plan proposals. Nested summary collections are normalized
+   sync runs, summaries, dashboard/trend snapshots, training blocks, and plan
+   constraints and plan proposals. Nested summary collections are normalized
    to tuples as well. Runtime regression coverage verifies tuple storage.
-3. Added immutable `ActivityCursor`, `SleepCursor`, and `RecoveryCursor`
-   value types with literal family ownership. Each storage port now accepts
-   and returns only its matching cursor type, leaving the contract ready for
+3. Added immutable `ActivityCursor`, `SleepCursor`, and `RecoveryCursor` value
+   types with literal family ownership. Each storage port now accepts and
+   returns only its matching cursor type, leaving the contract ready for
    independent SQLite-backed implementations. Regression coverage checks the
    protocol annotations.
 
@@ -92,3 +92,94 @@ performed.
 ## Fix commit
 
 Commit message: `fix: address Task 2 review findings`.
+
+---
+
+# Task 2 Pydantic migration report
+
+## Scope
+
+Converted domain and plan records from dataclasses to Pydantic v2 models. Added shared immutable `DomainModel` configuration with `frozen=True` and `extra="forbid"`, strict non-negative integer validation, timezone-aware datetime validation, ordering validators, literal family-specific cursors, and tuple-typed nested collections. Preserved public model names and port interfaces. No Docker commands were run, per request.
+
+Existing migration tests were preserved and completed with the model-specific type-check suppressions required for Pydantic runtime list-to-tuple normalization.
+
+## Verification
+
+All commands were run from `/Users/sinan/Developer/strava-dashboard` on 2026-08-17.
+
+### Focused migration tests
+
+Command:
+
+```text
+uv run pytest tests/test_domain_models.py tests/test_domain_ports.py tests/test_no_dataclasses.py -q
+```
+
+Result:
+
+```text
+..................................................                       [100%]
+50 passed in 0.10s
+```
+
+### Full test suite
+
+Command:
+
+```text
+uv run pytest -q
+```
+
+Result:
+
+```text
+.......................................................                  [100%]
+55 passed in 0.09s
+```
+
+### Ruff format
+
+Command:
+
+```text
+uv run ruff format --check .
+```
+
+Result:
+
+```text
+13 files already formatted
+```
+
+### Ruff lint
+
+Command:
+
+```text
+uv run ruff check .
+```
+
+Result:
+
+```text
+All checks passed!
+```
+
+### Ty type check
+
+Command:
+
+```text
+uv run ty check .
+```
+
+Result:
+
+```text
+All checks passed!
+```
+
+## Concerns
+
+- `uv` required access to its existing cache outside the default sandbox; no dependency installation or Docker execution was performed.
+- Pydantic accepts list inputs and materializes tuple fields at validation time. Existing tests retain list-shaped constructor inputs and use narrow `ty` ignores for that runtime normalization boundary.

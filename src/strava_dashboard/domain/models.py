@@ -1,89 +1,85 @@
-from collections.abc import Sequence
-from dataclasses import dataclass
 from datetime import date, datetime
 from enum import StrEnum
-from typing import ClassVar, Literal
+from typing import Literal, Self
+
+from pydantic import BaseModel, ConfigDict, StrictInt, field_validator, model_validator
 
 DataFamily = Literal["activities", "sleep", "recovery"]
 SyncStatus = Literal["succeeded", "failed"]
 
-_DATA_FAMILIES = frozenset({"activities", "sleep", "recovery"})
-_SYNC_STATUSES = frozenset({"succeeded", "failed"})
+
+class DomainModel(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    @field_validator("external_id", "activity_type", "metric_name", "unit", "run_id", check_fields=False)
+    @classmethod
+    def require_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("value must not be empty")
+        return value
+
+    @field_validator("started_at", "ended_at", "measured_at", "watermark", check_fields=False)
+    @classmethod
+    def require_aware(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("datetime must be timezone-aware")
+        return value
+
+    @field_validator("duration_seconds", "record_count", "activity_count", check_fields=False)
+    @classmethod
+    def require_non_negative_int(cls, value: StrictInt) -> StrictInt:
+        if value < 0:
+            raise ValueError("value must be a non-negative integer")
+        return value
 
 
-def _require_text(name: str, value: str) -> None:
-    if not value.strip():
-        raise ValueError(f"{name} must not be empty")
-
-
-def _require_aware(name: str, value: datetime) -> None:
-    if value.tzinfo is None or value.utcoffset() is None:
-        raise ValueError(f"{name} must be timezone-aware")
-
-
-def _require_non_negative(name: str, value: int | float) -> None:
-    if value < 0:
-        raise ValueError(f"{name} must be non-negative")
-
-
-def _require_non_negative_int(name: str, value: int) -> None:
-    if type(value) is not int or value < 0:
-        raise ValueError(f"{name} must be a non-negative integer")
-
-
-@dataclass(frozen=True, slots=True)
-class SyncWindow:
+class SyncWindow(DomainModel):
     start: datetime | None
     end: datetime
 
-    def __post_init__(self) -> None:
-        if self.start is not None:
-            _require_aware("start", self.start)
-            if self.end <= self.start:
-                raise ValueError("end must be after start")
-        _require_aware("end", self.end)
+    @field_validator("start", "end")
+    @classmethod
+    def timestamps_must_be_aware(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("datetime must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def validate_order(self) -> Self:
+        if self.start is not None and self.end <= self.start:
+            raise ValueError("end must be after start")
+        return self
 
 
-@dataclass(frozen=True, slots=True)
-class Activity:
+class Activity(DomainModel):
     external_id: str
     activity_type: str
     started_at: datetime
     local_date: date
-    duration_seconds: int
+    duration_seconds: StrictInt
     distance_meters: float | None
     elevation_meters: float | None
     average_heart_rate: float | None
     max_heart_rate: float | None
     calories: float | None
 
-    def __post_init__(self) -> None:
-        _require_text("external_id", self.external_id)
-        _require_text("activity_type", self.activity_type)
-        _require_aware("started_at", self.started_at)
-        _require_non_negative_int("duration_seconds", self.duration_seconds)
 
-
-@dataclass(frozen=True, slots=True)
-class SleepSession:
+class SleepSession(DomainModel):
     external_id: str
     started_at: datetime
     ended_at: datetime
     local_date: date
-    duration_seconds: int
+    duration_seconds: StrictInt
     score: float | None
 
-    def __post_init__(self) -> None:
-        _require_text("external_id", self.external_id)
-        _require_aware("started_at", self.started_at)
-        _require_aware("ended_at", self.ended_at)
-        _require_non_negative_int("duration_seconds", self.duration_seconds)
+    @model_validator(mode="after")
+    def validate_order(self) -> Self:
         if self.ended_at <= self.started_at:
             raise ValueError("ended_at must be after started_at")
+        return self
 
 
-@dataclass(frozen=True, slots=True)
-class RecoverySignal:
+class RecoverySignal(DomainModel):
     external_id: str
     local_date: date
     measured_at: datetime
@@ -91,138 +87,87 @@ class RecoverySignal:
     value: float
     unit: str
 
-    def __post_init__(self) -> None:
-        _require_text("external_id", self.external_id)
-        _require_text("metric_name", self.metric_name)
-        _require_text("unit", self.unit)
-        _require_aware("measured_at", self.measured_at)
 
-
-@dataclass(frozen=True, slots=True)
-class SyncCursor:
+class SyncCursor(DomainModel):
     data_family: DataFamily
     watermark: datetime
 
-    def __post_init__(self) -> None:
-        if self.data_family not in _DATA_FAMILIES:
-            raise ValueError("data_family must identify exactly one supported family")
-        _require_aware("watermark", self.watermark)
 
-
-@dataclass(frozen=True, slots=True)
-class ActivityCursor:
+class ActivityCursor(DomainModel):
+    data_family: Literal["activities"] = "activities"
     watermark: datetime
 
-    data_family: ClassVar[Literal["activities"]] = "activities"
 
-    def __post_init__(self) -> None:
-        _require_aware("watermark", self.watermark)
-
-
-@dataclass(frozen=True, slots=True)
-class SleepCursor:
+class SleepCursor(DomainModel):
+    data_family: Literal["sleep"] = "sleep"
     watermark: datetime
 
-    data_family: ClassVar[Literal["sleep"]] = "sleep"
 
-    def __post_init__(self) -> None:
-        _require_aware("watermark", self.watermark)
-
-
-@dataclass(frozen=True, slots=True)
-class RecoveryCursor:
+class RecoveryCursor(DomainModel):
+    data_family: Literal["recovery"] = "recovery"
     watermark: datetime
 
-    data_family: ClassVar[Literal["recovery"]] = "recovery"
 
-    def __post_init__(self) -> None:
-        _require_aware("watermark", self.watermark)
-
-
-@dataclass(frozen=True, slots=True)
-class SyncStageResult:
+class SyncStageResult(DomainModel):
     data_family: DataFamily
     status: SyncStatus
-    record_count: int
+    record_count: StrictInt
     error_code: str | None
 
-    def __post_init__(self) -> None:
-        if self.data_family not in _DATA_FAMILIES:
-            raise ValueError("data_family must identify exactly one supported family")
-        if self.status not in _SYNC_STATUSES:
-            raise ValueError("status must be succeeded or failed")
-        _require_non_negative_int("record_count", self.record_count)
 
-
-@dataclass(frozen=True, slots=True)
-class SyncRun:
+class SyncRun(DomainModel):
     run_id: str
     started_at: datetime
     ended_at: datetime | None
-    stages: Sequence[SyncStageResult]
+    stages: tuple[SyncStageResult, ...]
 
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "stages", tuple(self.stages))
-        _require_text("run_id", self.run_id)
-        _require_aware("started_at", self.started_at)
-        if self.ended_at is not None:
-            _require_aware("ended_at", self.ended_at)
-            if self.ended_at < self.started_at:
-                raise ValueError("ended_at must not be before started_at")
+    @model_validator(mode="after")
+    def validate_order(self) -> Self:
+        if self.ended_at is not None and self.ended_at < self.started_at:
+            raise ValueError("ended_at must not be before started_at")
+        return self
 
 
-@dataclass(frozen=True, slots=True)
-class TrainingSummary:
+class TrainingSummary(DomainModel):
     start: date
     end: date
-    activity_count: int
-    duration_seconds: int
+    activity_count: StrictInt
+    duration_seconds: StrictInt
     distance_meters: float
     elevation_meters: float
-    sport_counts: Sequence[Sequence[str | int]]
+    sport_counts: tuple[tuple[str | int, ...], ...]
     training_load: float | None
 
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "sport_counts", tuple(tuple(item) for item in self.sport_counts))
-        _require_non_negative_int("activity_count", self.activity_count)
-        _require_non_negative_int("duration_seconds", self.duration_seconds)
 
-
-@dataclass(frozen=True, slots=True)
-class HealthSummary:
+class HealthSummary(DomainModel):
     start: date
     end: date
     available: bool
     average_sleep_seconds: float | None
     average_sleep_score: float | None
-    recovery_metrics: Sequence[Sequence[str | float]]
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "recovery_metrics", tuple(tuple(item) for item in self.recovery_metrics))
+    recovery_metrics: tuple[tuple[str | float, ...], ...]
 
 
-@dataclass(frozen=True, slots=True)
-class TrainingBlock:
+class TrainingBlock(DomainModel):
     start: date
     end: date
     outcome: Activity
-    activities: Sequence[Activity]
+    activities: tuple[Activity, ...]
     summary: TrainingSummary
 
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "activities", tuple(self.activities))
 
-
-@dataclass(frozen=True, slots=True)
-class DashboardSnapshot:
+class DashboardSnapshot(DomainModel):
     generated_at: datetime
     training: TrainingSummary
     health: HealthSummary
-    recent_activities: Sequence[Activity]
+    recent_activities: tuple[Activity, ...]
 
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "recent_activities", tuple(self.recent_activities))
-        _require_aware("generated_at", self.generated_at)
+    @field_validator("generated_at")
+    @classmethod
+    def generated_at_must_be_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("generated_at must be timezone-aware")
+        return value
 
 
 class TrendBucket(StrEnum):
@@ -231,14 +176,9 @@ class TrendBucket(StrEnum):
     YEAR = "year"
 
 
-@dataclass(frozen=True, slots=True)
-class TrendSnapshot:
+class TrendSnapshot(DomainModel):
     start: date
     end: date
     bucket: TrendBucket
-    training: Sequence[TrainingSummary]
-    health: Sequence[HealthSummary]
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "training", tuple(self.training))
-        object.__setattr__(self, "health", tuple(self.health))
+    training: tuple[TrainingSummary, ...]
+    health: tuple[HealthSummary, ...]

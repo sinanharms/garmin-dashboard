@@ -1,91 +1,104 @@
-from collections.abc import Sequence
-from dataclasses import dataclass
 from datetime import date, datetime
 
-from strava_dashboard.domain.models import (
-    HealthSummary,
-    TrainingBlock,
-    TrainingSummary,
-    _require_aware,
-    _require_non_negative_int,
-    _require_text,
-)
+from pydantic import StrictInt, field_validator
+
+from strava_dashboard.domain.models import DomainModel, HealthSummary, TrainingBlock, TrainingSummary
 
 
-@dataclass(frozen=True, slots=True)
-class Goal:
+class Goal(DomainModel):
     goal_id: str
     description: str
     target_date: date
 
-    def __post_init__(self) -> None:
-        _require_text("goal_id", self.goal_id)
-        _require_text("description", self.description)
+    @field_validator("goal_id", "description")
+    @classmethod
+    def require_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("value must not be empty")
+        return value
 
 
-@dataclass(frozen=True, slots=True)
-class Workout:
+class Workout(DomainModel):
     workout_id: str
     scheduled_date: date
     activity_type: str
-    duration_seconds: int
+    duration_seconds: StrictInt
     intensity: str
     purpose: str
     explanation: str
 
-    def __post_init__(self) -> None:
-        _require_text("workout_id", self.workout_id)
-        _require_text("activity_type", self.activity_type)
-        _require_text("intensity", self.intensity)
-        _require_text("purpose", self.purpose)
-        _require_text("explanation", self.explanation)
-        _require_non_negative_int("duration_seconds", self.duration_seconds)
+    @field_validator("workout_id", "activity_type", "intensity", "purpose", "explanation")
+    @classmethod
+    def require_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("value must not be empty")
+        return value
+
+    @field_validator("duration_seconds")
+    @classmethod
+    def require_non_negative(cls, value: StrictInt) -> StrictInt:
+        if value < 0:
+            raise ValueError("duration_seconds must be a non-negative integer")
+        return value
 
 
-@dataclass(frozen=True, slots=True)
-class PlanConstraints:
-    weekly_time_budget_seconds: int
-    available_weekdays: Sequence[int]
-    activity_preferences: Sequence[str]
-    requirements: Sequence[str]
+class PlanConstraints(DomainModel):
+    weekly_time_budget_seconds: StrictInt
+    available_weekdays: tuple[StrictInt, ...]
+    activity_preferences: tuple[str, ...]
+    requirements: tuple[str, ...]
 
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "available_weekdays", tuple(self.available_weekdays))
-        object.__setattr__(self, "activity_preferences", tuple(self.activity_preferences))
-        object.__setattr__(self, "requirements", tuple(self.requirements))
-        _require_non_negative_int("weekly_time_budget_seconds", self.weekly_time_budget_seconds)
-        if any(day < 0 or day > 6 for day in self.available_weekdays):
+    @field_validator("weekly_time_budget_seconds")
+    @classmethod
+    def require_non_negative_budget(cls, value: StrictInt) -> StrictInt:
+        if value < 0:
+            raise ValueError("weekly_time_budget_seconds must be a non-negative integer")
+        return value
+
+    @field_validator("available_weekdays")
+    @classmethod
+    def validate_weekdays(cls, value: tuple[StrictInt, ...]) -> tuple[StrictInt, ...]:
+        if any(day < 0 or day > 6 for day in value):
             raise ValueError("available_weekdays must contain values from 0 through 6")
+        return value
 
 
-@dataclass(frozen=True, slots=True)
-class PlanProposal:
+class PlanProposal(DomainModel):
     proposal_id: str
     goal_id: str
     week_start: date
-    workouts: Sequence[Workout]
+    workouts: tuple[Workout, ...]
     explanation: str
     created_at: datetime
 
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "workouts", tuple(self.workouts))
-        _require_text("proposal_id", self.proposal_id)
-        _require_text("goal_id", self.goal_id)
-        _require_text("explanation", self.explanation)
-        _require_aware("created_at", self.created_at)
+    @field_validator("proposal_id", "goal_id", "explanation")
+    @classmethod
+    def require_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("value must not be empty")
+        return value
+
+    @field_validator("created_at")
+    @classmethod
+    def created_at_must_be_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("created_at must be timezone-aware")
+        return value
 
 
-@dataclass(frozen=True, slots=True)
-class ValidatedPlan:
+class ValidatedPlan(DomainModel):
     proposal: PlanProposal
     validated_at: datetime
 
-    def __post_init__(self) -> None:
-        _require_aware("validated_at", self.validated_at)
+    @field_validator("validated_at")
+    @classmethod
+    def validated_at_must_be_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("validated_at must be timezone-aware")
+        return value
 
 
-@dataclass(frozen=True, slots=True)
-class CoachContext:
+class CoachContext(DomainModel):
     goal: Goal
     constraints: PlanConstraints
     training: TrainingSummary
