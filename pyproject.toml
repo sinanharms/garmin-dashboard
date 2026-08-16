@@ -1,0 +1,45 @@
+[project]
+name = "strava-dashboard"
+version = "0.1.0"
+description = "Personal Garmin training dashboard"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "mcp>=1.0",
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.20",
+    "httpx>=0.20",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.0,!=4.5.1",
+    "pytest>=9.0.2",
+    "ruff>=0.15.20",
+    "ty>=0.0.55",
+]
+
+[tool.ruff]
+line-length = 128
+target-version = "py314"
+exclude = [".venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,38 @@
+services:
+  app:
+    build: .
+    command: uv run uvicorn strava_dashboard.api.app:app --host 0.0.0.0 --port 8000
+    env_file: .env
+    environment:
+      GARMIN_TOKEN_DIR: /var/lib/garminconnect
+      DATABASE_PATH: /var/lib/dashboard/dashboard.sqlite3
+      BACKUP_DIR: /var/lib/dashboard/backups
+      GARMIN_MCP_COMMAND: garmin-mcp
+      MCP_TIMEOUT_SECONDS: "30"
+      BACKUP_RETENTION_COUNT: "7"
+      BACKUP_RETENTION_DAYS: "31"
+    volumes:
+      - dashboard_data:/var/lib/dashboard
+      - garmin_tokens:/var/lib/garminconnect
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  scheduler:
+    build: .
+    command: uv run python -m strava_dashboard.worker
+    env_file: .env
+    environment:
+      GARMIN_TOKEN_DIR: /var/lib/garminconnect
+      DATABASE_PATH: /var/lib/dashboard/dashboard.sqlite3
+      BACKUP_DIR: /var/lib/dashboard/backups
+      GARMIN_MCP_COMMAND: garmin-mcp
+      MCP_TIMEOUT_SECONDS: "30"
+      BACKUP_RETENTION_COUNT: "7"
+      BACKUP_RETENTION_DAYS: "31"
+    volumes:
+      - dashboard_data:/var/lib/dashboard
+      - garmin_tokens:/var/lib/garminconnect
+
+volumes:
+  dashboard_data:
+  garmin_tokens:
