@@ -1,5 +1,5 @@
-from collections.abc import Callable, Mapping, Sequence
-from datetime import date, tzinfo
+from collections.abc import Awaitable, Callable, Sequence
+from datetime import date, timedelta, tzinfo
 from typing import Protocol, TypeVar
 
 from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession, SyncWindow
@@ -8,13 +8,15 @@ from strava_dashboard.ports.garmin import GarminDataSource
 from .mapping import (
     ACTIVITIES_TOOL,
     HRV_TOOL,
-    PAGE_SIZE,
     SLEEP_TOOL,
     GarminDataError,
-    date_argument,
+    activity_arguments,
     map_activities,
     map_recovery,
     map_sleep,
+    next_activity_page,
+    recovery_arguments,
+    sleep_arguments,
 )
 from .session import McpSession, McpSessionError
 
@@ -31,25 +33,51 @@ class GarminMcpAdapter(GarminDataSource):
         self._session_factory = session_factory
 
     async def fetch_activities(self, window: SyncWindow) -> Sequence[Activity]:
-        return await self._fetch(window, ACTIVITIES_TOOL, self._activity_arguments, map_activities)
+        async def fetch(session: McpSession) -> tuple[Activity, ...]:
+            start_date, end_date = _window_dates(window)
+            page = 0
+            activities: list[Activity] = []
+            while True:
+                payload = await session.call_tool(ACTIVITIES_TOOL, activity_arguments(start_date, end_date, page))
+                activities.extend(map_activities(payload, _window_timezone(window)))
+                next_page = next_activity_page(payload, page)
+                if next_page is None:
+                    return tuple(activities)
+                page = next_page
+
+        return await self._run(fetch)
 
     async def fetch_sleep(self, window: SyncWindow) -> Sequence[SleepSession]:
-        return await self._fetch(window, SLEEP_TOOL, self._sleep_arguments, lambda payload, _: map_sleep(payload))
+        async def fetch(session: McpSession) -> tuple[SleepSession, ...]:
+            timezone = _window_timezone(window)
+            records: list[SleepSession] = []
+            for day in _window_days(window):
+                payload = await session.call_tool(SLEEP_TOOL, sleep_arguments(day))
+                records.extend(map_sleep(payload, day, timezone))
+            return tuple(records)
+
+        return await self._run(fetch)
 
     async def fetch_recovery(self, window: SyncWindow) -> Sequence[RecoverySignal]:
-        return await self._fetch(window, HRV_TOOL, self._recovery_arguments, map_recovery)
+        async def fetch(session: McpSession) -> tuple[RecoverySignal, ...]:
+            records: list[RecoverySignal] = []
+            for day in _window_days(window):
+                payload = await session.call_tool(HRV_TOOL, recovery_arguments(day))
+                records.extend(map_recovery(payload, _window_timezone(window)))
+            return tuple(records)
 
-    async def _fetch(
+        return await self._run(fetch)
+
+    async def _run(
         self,
-        window: SyncWindow,
-        tool_name: str,
-        arguments_builder: Callable[[date], dict[str, object]],
-        mapper: Callable[[Mapping[str, object], tzinfo], tuple[Record, ...]],
+        fetch: Callable[[McpSession], Awaitable[tuple[Record, ...]]],
     ) -> tuple[Record, ...]:
-        session = await self._session_factory.open()
         try:
-            payload = await session.call_tool(tool_name, arguments_builder(_window_date(window)))
-            return mapper(payload, _window_timezone(window))
+            session = await self._session_factory.open()
+        except McpSessionError as error:
+            raise GarminDataError("Garmin MCP session startup failed") from error
+        try:
+            return await fetch(session)
         except (GarminDataError, McpSessionError) as error:
             if isinstance(error, GarminDataError):
                 raise
@@ -59,25 +87,20 @@ class GarminMcpAdapter(GarminDataSource):
         finally:
             await session.close()
 
-    @staticmethod
-    def _activity_arguments(day: date) -> dict[str, object]:
-        value = date_argument(day)
-        return {"start_date": value, "end_date": value, "page": 0, "page_size": PAGE_SIZE}
-
-    @staticmethod
-    def _sleep_arguments(day: date) -> dict[str, object]:
-        return {"date": date_argument(day)}
-
-    @staticmethod
-    def _recovery_arguments(day: date) -> dict[str, object]:
-        return {"date": date_argument(day), "return_timeseries": False}
-
-
-def _window_date(window: SyncWindow) -> date:
-    return (window.start or window.end).date()
-
 
 def _window_timezone(window: SyncWindow) -> tzinfo:
     timezone = (window.start or window.end).tzinfo
     assert timezone is not None
     return timezone
+
+
+def _window_dates(window: SyncWindow) -> tuple[date, date]:
+    timezone = _window_timezone(window)
+    start = (window.start or window.end).astimezone(timezone).date()
+    end = window.end.astimezone(timezone).date()
+    return start, end
+
+
+def _window_days(window: SyncWindow) -> tuple[date, ...]:
+    start, end = _window_dates(window)
+    return tuple(start + timedelta(days=offset) for offset in range((end - start).days + 1))

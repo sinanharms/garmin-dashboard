@@ -1,12 +1,12 @@
 from collections.abc import Mapping, Sequence
-from datetime import UTC, date, datetime, tzinfo
-from typing import cast
+from datetime import UTC, date, datetime, time, tzinfo
+from typing import Literal, cast
+
+from pydantic import BaseModel, ConfigDict
 
 from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession
 
-ACTIVITIES_TOOL = "get_activities_by_date"
-SLEEP_TOOL = "get_sleep_summary"
-HRV_TOOL = "get_hrv_data"
+GARMIN_MCP_SCHEMA_COMMIT = "3610be6feed93088d85b0f35aba9d7d07c2505a7"
 PAGE_SIZE = 200
 HRV_METRICS = (
     "last_night_avg_hrv_ms",
@@ -18,6 +18,49 @@ HRV_METRICS = (
 )
 
 
+class ToolArgument(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    json_type: Literal["string", "integer", "boolean"]
+    required: bool
+    default: str | int | bool | None = None
+
+
+class ToolContract(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    arguments: tuple[ToolArgument, ...]
+
+
+ACTIVITIES_CONTRACT = ToolContract(
+    name="get_activities_by_date",
+    arguments=(
+        ToolArgument(name="start_date", json_type="string", required=True),
+        ToolArgument(name="end_date", json_type="string", required=True),
+        ToolArgument(name="activity_type", json_type="string", required=False, default=""),
+        ToolArgument(name="page", json_type="integer", required=False, default=0),
+        ToolArgument(name="page_size", json_type="integer", required=False, default=100),
+    ),
+)
+SLEEP_CONTRACT = ToolContract(
+    name="get_sleep_summary",
+    arguments=(ToolArgument(name="date", json_type="string", required=True),),
+)
+HRV_CONTRACT = ToolContract(
+    name="get_hrv_data",
+    arguments=(
+        ToolArgument(name="date", json_type="string", required=True),
+        ToolArgument(name="return_timeseries", json_type="boolean", required=False, default=False),
+    ),
+)
+
+ACTIVITIES_TOOL = ACTIVITIES_CONTRACT.name
+SLEEP_TOOL = SLEEP_CONTRACT.name
+HRV_TOOL = HRV_CONTRACT.name
+
+
 class GarminDataError(RuntimeError):
     """Raised when Garmin MCP data cannot become a domain model."""
 
@@ -26,21 +69,51 @@ def date_argument(value: date) -> str:
     return value.isoformat()
 
 
+def activity_arguments(start_date: date, end_date: date, page: int) -> dict[str, object]:
+    return {
+        "start_date": date_argument(start_date),
+        "end_date": date_argument(end_date),
+        "page": page,
+        "page_size": PAGE_SIZE,
+    }
+
+
+def sleep_arguments(day: date) -> dict[str, object]:
+    return {"date": date_argument(day)}
+
+
+def recovery_arguments(day: date) -> dict[str, object]:
+    return {"date": date_argument(day), "return_timeseries": False}
+
+
+def next_activity_page(payload: Mapping[str, object], current_page: int) -> int | None:
+    has_more = payload.get("has_more")
+    if not isinstance(has_more, bool):
+        raise GarminDataError("missing or malformed field: has_more")
+    if not has_more:
+        return None
+    next_page = _required_int(payload, "next_page")
+    if next_page <= current_page:
+        raise GarminDataError("missing or malformed field: next_page")
+    return next_page
+
+
 def map_activities(payload: Mapping[str, object], local_timezone: tzinfo) -> tuple[Activity, ...]:
     rows = _required_sequence(payload, "activities")
     return tuple(_map_activity(row, local_timezone) for row in rows)
 
 
-def map_sleep(payload: Mapping[str, object]) -> tuple[SleepSession, ...]:
+def map_sleep(payload: Mapping[str, object], requested_local_date: date, local_timezone: tzinfo) -> tuple[SleepSession, ...]:
     started_at = _timestamp_millis(payload, "sleep_start")
     ended_at = _timestamp_millis(payload, "sleep_end")
-    local_date = _required_date(payload, "date", started_at.date())
+    if datetime.combine(requested_local_date, time.min, tzinfo=local_timezone).utcoffset() is None:
+        raise GarminDataError("missing or malformed local timezone")
     return (
         SleepSession(
-            external_id=f"sleep:{local_date.isoformat()}",
+            external_id=f"sleep:{requested_local_date.isoformat()}",
             started_at=started_at,
             ended_at=ended_at,
-            local_date=local_date,
+            local_date=requested_local_date,
             duration_seconds=_required_int(payload, "sleep_seconds"),
             score=_optional_float(payload, "sleep_score"),
         ),
