@@ -1,0 +1,13 @@
+{
+  "date": "2024-01-15",
+  "last_night_avg_hrv_ms": 48,
+  "last_night_5min_high_hrv_ms": 52,
+  "weekly_avg_hrv_ms": 45,
+  "baseline_balanced_low_ms": 40,
+  "baseline_balanced_upper_ms": 55,
+  "baseline_low_upper_ms": 35,
+  "status": "BALANCED",
+  "feedback": "FIXTURE_BALANCED",
+  "sleep_start": "2024-01-15T00:10:00.0",
+  "sleep_end": "2024-01-15T07:30:00.0"
+}
