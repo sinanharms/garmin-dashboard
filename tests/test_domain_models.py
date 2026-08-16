@@ -161,6 +161,8 @@ def test_sync_records_validate_counts_ids_and_timestamps(utc_now: datetime) -> N
     with pytest.raises(ValidationError):
         SyncRun(run_id=" ", started_at=utc_now, ended_at=None, stages=())
     with pytest.raises(ValidationError):
+        SyncRun(run_id="run-1", started_at=utc_now, ended_at=utc_now, stages=())
+    with pytest.raises(ValidationError):
         SyncRun(run_id="run-1", started_at=utc_now, ended_at=utc_now - timedelta(seconds=1), stages=())
 
 

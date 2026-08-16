@@ -93,6 +93,30 @@ performed.
 
 Commit message: `fix: address Task 2 review findings`.
 
+## Task 2 review equality fix
+
+Fixed the remaining Task 2 review finding on HEAD `b083209`: `SyncRun` now
+rejects `ended_at` equal to `started_at`, as well as earlier timestamps. Added
+the equality regression to `tests/test_domain_models.py`.
+
+### Exact verification commands and results
+
+```text
+$ uv run pytest tests/test_domain_models.py -q
+..............................................                           [100%]
+46 passed in 0.07s
+
+$ uv run pytest -q
+.......................................................                  [100%]
+55 passed in 0.09s
+
+$ uv run ruff check .
+All checks passed!
+
+$ uv run ty check .
+All checks passed!
+```
+
 ---
 
 # Task 2 Pydantic migration report
