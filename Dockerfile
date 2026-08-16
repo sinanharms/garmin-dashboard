@@ -11,3 +11,5 @@ RUN uv tool install --python 3.14 --from git+https://github.com/Taxuspt/garmin_m
 COPY src ./src
 RUN uv sync --frozen --no-dev
 ENV PATH="/root/.local/bin:/app/.venv/bin:$PATH"
+ENV HOME="/root"
+ENV GARMIN_TOKEN_DIR="/root/.garminconnect"
