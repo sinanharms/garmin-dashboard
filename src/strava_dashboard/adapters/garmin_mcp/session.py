@@ -16,7 +16,7 @@ class McpSessionError(RuntimeError):
 
 
 class McpSession(Protocol):
-    async def call_tool(self, name: str, arguments: Mapping[str, object]) -> Mapping[str, object]: ...
+    async def call_tool(self, name: str, arguments: Mapping[str, object]) -> Mapping[str, object] | str: ...
 
     async def close(self) -> None: ...
 
@@ -55,7 +55,7 @@ class _SdkMcpSession:
         self._timeout_seconds = timeout_seconds
         self._closed = False
 
-    async def call_tool(self, name: str, arguments: Mapping[str, object]) -> Mapping[str, object]:
+    async def call_tool(self, name: str, arguments: Mapping[str, object]) -> Mapping[str, object] | str:
         try:
             response = await asyncio.wait_for(
                 self._sdk_session.call_tool(name, arguments=dict(arguments)),
@@ -63,7 +63,7 @@ class _SdkMcpSession:
             )
             if getattr(response, "is_error", False):
                 raise McpSessionError("MCP tool returned an error")
-            return _result_mapping(response)
+            return _result_mapping(response, name)
         except McpSessionError:
             raise
         except Exception as error:
@@ -80,7 +80,7 @@ class _SdkMcpSession:
                 raise McpSessionError("MCP session close failed") from error
 
 
-def _result_mapping(response: object) -> Mapping[str, object]:
+def _result_mapping(response: object, tool_name: str) -> Mapping[str, object] | str:
     structured = getattr(response, "structured_content", None)
     if isinstance(structured, Mapping):
         return _validated_mapping(structured)
@@ -93,7 +93,11 @@ def _result_mapping(response: object) -> Mapping[str, object]:
         raise McpSessionError("MCP tool returned malformed content")
     try:
         decoded = json.loads(item.text)
-    except TypeError, json.JSONDecodeError:
+    except (TypeError, json.JSONDecodeError):
+        if tool_name == "get_sleep_summary" and item.text.startswith("No sleep summary found"):
+            return item.text
+        if tool_name == "get_hrv_data" and item.text.startswith("No HRV data found"):
+            return item.text
         raise McpSessionError("MCP tool returned malformed JSON content") from None
     return _validated_mapping(decoded)
 

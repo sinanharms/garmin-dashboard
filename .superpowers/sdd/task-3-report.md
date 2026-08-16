@@ -59,3 +59,31 @@ All checks passed!
 ```
 
 Docker Compose checks and live MCP/auth/schema discovery remain unavailable: Docker daemon/socket and Garmin live credentials were not available. Runtime composition-root wiring remains outside this bounded Task 3 slice.
+
+## Task 3 no-data fix
+
+Completed: 2026-08-17. Base: `bf3d131`.
+
+Exact fix:
+
+- Garmin MCP plain-text responses beginning with `No sleep summary found` are treated as an empty sleep result.
+- Garmin MCP plain-text responses beginning with `No HRV data found` are treated as an empty HRV/recovery result.
+- Matching is tool-specific; malformed JSON and other text remain errors.
+- Error messages remain redacted and do not include raw payloads or secrets.
+- Added regression tests for sleep and HRV no-data replies.
+
+Results:
+
+```text
+uv run pytest tests/test_garmin_mcp_adapter.py tests/test_garmin_mcp_mapping.py tests/test_garmin_mcp_session.py -q
+16 passed in 0.46s
+
+uv run pytest -q
+71 passed in 0.48s
+
+uv run ruff check .
+All checks passed!
+
+uv run ty check .
+All checks passed!
+```

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from mcp.types import CallToolResult, TextContent
@@ -63,7 +63,7 @@ def test_stdio_factory_forces_transport_and_closes(monkeypatch: pytest.MonkeyPat
         session = await StdioMcpSessionFactory("garmin-mcp", tmp_path / "tokens", 30).open()
         result = await session.call_tool("fixture_tool", {})
         await session.close()
-        return result
+        return cast(Mapping[str, object], result)
 
     assert asyncio.run(exercise()) == {"ok": True}
     parameters = captured["parameters"]
@@ -86,7 +86,7 @@ def test_stdio_session_parses_actual_json_text_envelope(monkeypatch: pytest.Monk
     async def exercise() -> Mapping[str, object]:
         session = await StdioMcpSessionFactory("garmin-mcp", tmp_path / "tokens", 30).open()
         try:
-            return await session.call_tool("fixture_tool", {})
+            return cast(Mapping[str, object], await session.call_tool("fixture_tool", {}))
         finally:
             await session.close()
 

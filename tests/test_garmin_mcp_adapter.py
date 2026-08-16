@@ -23,7 +23,7 @@ def load_fixture(name: str) -> dict[str, object]:
 class FakeSession:
     def __init__(
         self,
-        responses: Mapping[str, Mapping[str, object] | list[Mapping[str, object]]],
+        responses: Mapping[str, Mapping[str, object] | str | list[Mapping[str, object]] | list[str]],
         error: Exception | None = None,
     ) -> None:
         self.responses = responses
@@ -32,7 +32,7 @@ class FakeSession:
         self.response_indexes: dict[str, int] = {}
         self.closed = False
 
-    async def call_tool(self, name: str, arguments: Mapping[str, object]) -> Mapping[str, object]:
+    async def call_tool(self, name: str, arguments: Mapping[str, object]) -> Mapping[str, object] | str:
         self.calls.append((name, arguments))
         if self.error is not None:
             raise self.error
@@ -40,7 +40,7 @@ class FakeSession:
         if isinstance(response, list):
             index = self.response_indexes.get(name, 0)
             self.response_indexes[name] = index + 1
-            return cast(Mapping[str, object], response[index])
+            return cast(Mapping[str, object] | str, response[index])
         return response
 
     async def close(self) -> None:
@@ -164,6 +164,15 @@ def test_fetch_sleep_requests_every_local_date_and_preserves_requested_date() ->
     assert session.closed
 
 
+def test_fetch_sleep_treats_upstream_no_data_reply_as_empty() -> None:
+    session = FakeSession({"get_sleep_summary": "No sleep summary found for 2024-01-15"})
+
+    sleep = asyncio.run(GarminMcpAdapter(FakeSessionFactory(session)).fetch_sleep(sync_window()))
+
+    assert sleep == ()
+    assert session.closed
+
+
 def test_fetch_recovery_maps_each_fixture_metric() -> None:
     session = FakeSession({"get_hrv_data": load_fixture("garmin_recovery.json")})
     adapter = GarminMcpAdapter(FakeSessionFactory(session))
@@ -205,6 +214,15 @@ def test_fetch_recovery_requests_every_local_date() -> None:
         ("get_hrv_data", {"date": "2024-01-16", "return_timeseries": False}),
         ("get_hrv_data", {"date": "2024-01-17", "return_timeseries": False}),
     ]
+    assert session.closed
+
+
+def test_fetch_recovery_treats_upstream_no_data_reply_as_empty() -> None:
+    session = FakeSession({"get_hrv_data": "No HRV data found for 2024-01-15"})
+
+    signals = asyncio.run(GarminMcpAdapter(FakeSessionFactory(session)).fetch_recovery(sync_window()))
+
+    assert signals == ()
     assert session.closed
 
 

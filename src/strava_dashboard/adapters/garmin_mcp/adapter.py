@@ -1,6 +1,6 @@
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import date, timedelta, tzinfo
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, cast
 
 from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession, SyncWindow
 from strava_dashboard.ports.garmin import GarminDataSource
@@ -39,8 +39,11 @@ class GarminMcpAdapter(GarminDataSource):
             activities: list[Activity] = []
             while True:
                 payload = await session.call_tool(ACTIVITIES_TOOL, activity_arguments(start_date, end_date, page))
-                activities.extend(map_activities(payload, _window_timezone(window)))
-                next_page = next_activity_page(payload, page)
+                if not isinstance(payload, Mapping):
+                    raise GarminDataError("Garmin MCP activities response was malformed")
+                mapping = cast(Mapping[str, object], payload)
+                activities.extend(map_activities(mapping, _window_timezone(window)))
+                next_page = next_activity_page(mapping, page)
                 if next_page is None:
                     return tuple(activities)
                 page = next_page
@@ -53,7 +56,11 @@ class GarminMcpAdapter(GarminDataSource):
             records: list[SleepSession] = []
             for day in _window_days(window):
                 payload = await session.call_tool(SLEEP_TOOL, sleep_arguments(day))
-                records.extend(map_sleep(payload, day, timezone))
+                if isinstance(payload, str) and payload.startswith("No sleep summary found"):
+                    continue
+                if not isinstance(payload, Mapping):
+                    raise GarminDataError("Garmin MCP sleep response was malformed")
+                records.extend(map_sleep(cast(Mapping[str, object], payload), day, timezone))
             return tuple(records)
 
         return await self._run(fetch)
@@ -63,7 +70,11 @@ class GarminMcpAdapter(GarminDataSource):
             records: list[RecoverySignal] = []
             for day in _window_days(window):
                 payload = await session.call_tool(HRV_TOOL, recovery_arguments(day))
-                records.extend(map_recovery(payload, _window_timezone(window)))
+                if isinstance(payload, str) and payload.startswith("No HRV data found"):
+                    continue
+                if not isinstance(payload, Mapping):
+                    raise GarminDataError("Garmin MCP HRV response was malformed")
+                records.extend(map_recovery(cast(Mapping[str, object], payload), _window_timezone(window)))
             return tuple(records)
 
         return await self._run(fetch)
