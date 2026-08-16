@@ -123,17 +123,21 @@ def map_sleep(payload: Mapping[str, object], requested_local_date: date, local_t
 def map_recovery(payload: Mapping[str, object], local_timezone: tzinfo) -> tuple[RecoverySignal, ...]:
     local_date = _required_date(payload, "date")
     measured_at = _naive_timestamp(payload, "sleep_end", local_timezone)
-    return tuple(
-        RecoverySignal(
-            external_id=f"hrv:{local_date.isoformat()}:{metric_name}",
-            local_date=local_date,
-            measured_at=measured_at,
-            metric_name=metric_name,
-            value=_required_float(payload, metric_name),
-            unit="ms",
+    signals: list[RecoverySignal] = []
+    for metric_name in HRV_METRICS:
+        if metric_name not in payload or payload[metric_name] is None:
+            continue
+        signals.append(
+            RecoverySignal(
+                external_id=f"hrv:{local_date.isoformat()}:{metric_name}",
+                local_date=local_date,
+                measured_at=measured_at,
+                metric_name=metric_name,
+                value=_required_float(payload, metric_name),
+                unit="ms",
+            )
         )
-        for metric_name in HRV_METRICS
-    )
+    return tuple(signals)
 
 
 def _map_activity(row: Mapping[str, object], local_timezone: tzinfo) -> Activity:

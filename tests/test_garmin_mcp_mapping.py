@@ -1,4 +1,9 @@
+from datetime import UTC, datetime
+
+import pytest
+
 from strava_dashboard.adapters.garmin_mcp import mapping
+from strava_dashboard.adapters.garmin_mcp.mapping import GarminDataError
 
 
 def test_tool_contracts_match_verified_upstream_schema() -> None:
@@ -20,3 +25,30 @@ def test_tool_contracts_match_verified_upstream_schema() -> None:
             {"name": "return_timeseries", "json_type": "boolean", "required": False, "default": False},
         ),
     }
+
+
+def test_map_recovery_returns_only_present_numeric_metrics() -> None:
+    payload = {
+        "date": "2024-01-15",
+        "sleep_end": "2024-01-15T07:30:00",
+        "last_night_avg_hrv_ms": 48,
+        "last_night_5min_high_hrv_ms": None,
+        "weekly_avg_hrv_ms": None,
+    }
+
+    signals = mapping.map_recovery(payload, UTC)
+
+    assert len(signals) == 1
+    assert signals[0].metric_name == "last_night_avg_hrv_ms"
+    assert signals[0].value == 48.0
+
+
+def test_map_recovery_rejects_malformed_present_metric() -> None:
+    payload = {
+        "date": "2024-01-15",
+        "sleep_end": datetime(2024, 1, 15, 7, 30).isoformat(),
+        "last_night_avg_hrv_ms": "malformed",
+    }
+
+    with pytest.raises(GarminDataError, match="last_night_avg_hrv_ms"):
+        mapping.map_recovery(payload, UTC)

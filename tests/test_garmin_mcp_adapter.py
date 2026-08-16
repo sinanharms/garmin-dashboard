@@ -10,6 +10,7 @@ import pytest
 
 from strava_dashboard.adapters.garmin_mcp.adapter import GarminMcpAdapter
 from strava_dashboard.adapters.garmin_mcp.mapping import GarminDataError
+from strava_dashboard.adapters.garmin_mcp.session import McpSessionError
 from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession, SyncWindow
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
@@ -25,9 +26,11 @@ class FakeSession:
         self,
         responses: Mapping[str, Mapping[str, object] | str | list[Mapping[str, object]] | list[str]],
         error: Exception | None = None,
+        close_error: Exception | None = None,
     ) -> None:
         self.responses = responses
         self.error = error
+        self.close_error = close_error
         self.calls: list[tuple[str, Mapping[str, object]]] = []
         self.response_indexes: dict[str, int] = {}
         self.closed = False
@@ -45,6 +48,8 @@ class FakeSession:
 
     async def close(self) -> None:
         self.closed = True
+        if self.close_error is not None:
+            raise self.close_error
 
 
 class FakeSessionFactory:
@@ -250,3 +255,29 @@ def test_mcp_exception_becomes_redacted_data_error_and_closes() -> None:
 
     assert "RAW-HEALTH-SECRET" not in str(error.value)
     assert session.closed
+
+
+def test_session_close_error_becomes_redacted_data_error() -> None:
+    session = FakeSession(
+        {"get_sleep_summary": "No sleep summary found for 2024-01-15"},
+        close_error=McpSessionError("RAW-SESSION-ERROR"),
+    )
+
+    with pytest.raises(GarminDataError) as error:
+        asyncio.run(GarminMcpAdapter(FakeSessionFactory(session)).fetch_sleep(sync_window()))
+
+    assert str(error.value) == "Garmin MCP session close failed"
+    assert "RAW-SESSION-ERROR" not in str(error.value)
+
+
+def test_session_close_error_does_not_replace_primary_error() -> None:
+    session = FakeSession(
+        {"get_sleep_summary": "No sleep summary found for 2024-01-15"},
+        error=McpSessionError("RAW-FETCH-ERROR"),
+        close_error=McpSessionError("RAW-SESSION-ERROR"),
+    )
+
+    with pytest.raises(GarminDataError) as error:
+        asyncio.run(GarminMcpAdapter(FakeSessionFactory(session)).fetch_sleep(sync_window()))
+
+    assert str(error.value) == "Garmin MCP request failed"

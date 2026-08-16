@@ -87,3 +87,35 @@ All checks passed!
 uv run ty check .
 All checks passed!
 ```
+
+## Final Task 3 review fixes
+
+Completed: 2026-08-17. Base: `f845ad4`.
+
+Concrete fixes applied:
+
+- `GarminMcpAdapter` now translates `McpSessionError` from `session.close()` into redacted `GarminDataError` and preserves any primary fetch or mapping error.
+- `map_recovery` now emits signals only for HRV metrics present with numeric, non-`None` values; malformed present values still raise `GarminDataError`.
+- Added regression tests for close-error translation and primary-error preservation, plus partial and malformed HRV metric mapping.
+
+Final commands and exact results:
+
+```text
+uv run pytest tests/test_garmin_mcp_adapter.py tests/test_garmin_mcp_session.py tests/test_garmin_mcp_mapping.py -q
+....................                                                     [100%]
+20 passed in 0.40s
+
+uv run pytest -q
+........................................................................ [ 96%]
+...                                                                      [100%]
+75 passed in 0.45s
+
+uv run ruff format --check .
+21 files already formatted
+
+uv run ruff check .
+All checks passed!
+
+uv run ty check .
+All checks passed!
+```

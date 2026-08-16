@@ -87,16 +87,24 @@ class GarminMcpAdapter(GarminDataSource):
             session = await self._session_factory.open()
         except McpSessionError as error:
             raise GarminDataError("Garmin MCP session startup failed") from error
+        primary_error: BaseException | None = None
         try:
             return await fetch(session)
         except (GarminDataError, McpSessionError) as error:
             if isinstance(error, GarminDataError):
+                primary_error = error
                 raise
-            raise GarminDataError("Garmin MCP request failed") from error
+            primary_error = GarminDataError("Garmin MCP request failed")
+            raise primary_error from error
         except Exception as error:
-            raise GarminDataError("Garmin MCP response mapping failed") from error
+            primary_error = GarminDataError("Garmin MCP response mapping failed")
+            raise primary_error from error
         finally:
-            await session.close()
+            try:
+                await session.close()
+            except McpSessionError as error:
+                if primary_error is None:
+                    raise GarminDataError("Garmin MCP session close failed") from error
 
 
 def _window_timezone(window: SyncWindow) -> tzinfo:
