@@ -72,4 +72,18 @@ describe("dashboard API client", () => {
       message: "Dashboard response invalid",
     });
   });
+
+  it("rejects a trends response that does not match the API contract", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ bucket: "month" }), { status: 200 }),
+      ),
+    );
+
+    await expect(getTrends({ start: "2026-01-01", end: "2026-08-17", bucket: "month" })).rejects.toMatchObject({
+      status: 0,
+      message: "Trends response invalid",
+    });
+  });
 });
