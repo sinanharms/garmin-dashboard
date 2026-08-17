@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import StrictInt, field_validator
+from pydantic import StrictInt, field_validator, model_validator
 
 from strava_dashboard.domain.models import DomainModel, HealthSummary, TrainingBlock, TrainingSummary
 
@@ -61,6 +61,19 @@ class PlanConstraints(DomainModel):
         if any(day < 0 or day > 6 for day in value):
             raise ValueError("available_weekdays must contain values from 0 through 6")
         return value
+
+    @field_validator("activity_preferences", "requirements")
+    @classmethod
+    def require_text_values(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(not item.strip() for item in value):
+            raise ValueError("constraint text must not be empty")
+        return value
+
+    @model_validator(mode="after")
+    def reject_duplicate_weekdays(self) -> PlanConstraints:
+        if len(set(self.available_weekdays)) != len(self.available_weekdays):
+            raise ValueError("available_weekdays must not contain duplicates")
+        return self
 
 
 class PlanProposal(DomainModel):
