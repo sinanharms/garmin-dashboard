@@ -60,4 +60,24 @@ describe("buildMetricSummaries", () => {
     expect(sleep?.value).toBe("Unavailable");
     expect(sleep?.status).toBe("missing");
   });
+
+  it("marks sleep missing when aggregate health is available but sleep is incomplete", () => {
+    const summaries = buildMetricSummaries({
+      ...viewWithHealth,
+      health: { ...viewWithHealth.health, average_sleep_seconds: null },
+    });
+
+    const sleep = summaries.find((item) => item.id === "sleep");
+    expect(sleep).toMatchObject({ value: "Unavailable", status: "missing" });
+  });
+
+  it("marks recovery missing when aggregate health is available but recovery is empty", () => {
+    const summaries = buildMetricSummaries({
+      ...viewWithHealth,
+      health: { ...viewWithHealth.health, recovery_metrics: [] },
+    });
+
+    const recovery = summaries.find((item) => item.id === "recovery");
+    expect(recovery).toMatchObject({ value: "Unavailable", status: "missing" });
+  });
 });
