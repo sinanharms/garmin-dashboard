@@ -246,14 +246,23 @@ def test_missing_required_activity_field_raises_redacted_data_error_and_closes()
     assert session.closed
 
 
-def test_mcp_exception_becomes_redacted_data_error_and_closes() -> None:
-    session = FakeSession({}, error=RuntimeError("RAW-HEALTH-SECRET"))
+def test_typed_mcp_exception_becomes_redacted_data_error_and_closes() -> None:
+    session = FakeSession({}, error=McpSessionError("RAW-HEALTH-SECRET"))
     adapter = GarminMcpAdapter(FakeSessionFactory(session))
 
     with pytest.raises(GarminDataError) as error:
         asyncio.run(adapter.fetch_sleep(sync_window()))
 
     assert "RAW-HEALTH-SECRET" not in str(error.value)
+    assert session.closed
+
+
+def test_unexpected_mcp_exception_propagates_and_closes() -> None:
+    session = FakeSession({}, error=ValueError("programming bug"))
+
+    with pytest.raises(ValueError, match="programming bug"):
+        asyncio.run(GarminMcpAdapter(FakeSessionFactory(session)).fetch_sleep(sync_window()))
+
     assert session.closed
 
 

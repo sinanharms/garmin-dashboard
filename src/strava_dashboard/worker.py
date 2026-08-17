@@ -1,4 +1,5 @@
 import asyncio
+import sqlite3
 from datetime import UTC, datetime, timedelta
 
 from strava_dashboard.adapters.garmin_mcp.adapter import GarminMcpAdapter
@@ -13,21 +14,27 @@ from strava_dashboard.config import Settings
 from strava_dashboard.domain.models import SyncRun, SyncWindow
 
 
-def build_sync_service(settings: Settings) -> SyncService:
-    connection = open_connection(settings.database_path)
-    session_factory = StdioMcpSessionFactory(
-        command=settings.garmin_mcp_command,
-        token_dir=settings.garmin_token_dir,
-        timeout_seconds=settings.mcp_timeout_seconds,
-    )
-    return SyncService(
-        source=GarminMcpAdapter(session_factory),
-        activities=SQLiteActivityStore(connection),
-        sleep=SQLiteSleepStore(connection),
-        recovery=SQLiteRecoveryStore(connection),
-        runs=SQLiteSyncRunStore(connection),
-        clock=lambda: datetime.now(UTC),
-    )
+def build_sync_service(settings: Settings, connection: sqlite3.Connection | None = None) -> SyncService:
+    owns_connection = connection is None
+    database = connection if connection is not None else open_connection(settings.database_path)
+    try:
+        session_factory = StdioMcpSessionFactory(
+            command=settings.garmin_mcp_command,
+            token_dir=settings.garmin_token_dir,
+            timeout_seconds=settings.mcp_timeout_seconds,
+        )
+        return SyncService(
+            source=GarminMcpAdapter(session_factory),
+            activities=SQLiteActivityStore(database),
+            sleep=SQLiteSleepStore(database),
+            recovery=SQLiteRecoveryStore(database),
+            runs=SQLiteSyncRunStore(database),
+            clock=lambda: datetime.now(UTC),
+        )
+    except Exception:
+        if owns_connection:
+            database.close()
+        raise
 
 
 def nightly_window(now: datetime) -> SyncWindow:
@@ -37,8 +44,12 @@ def nightly_window(now: datetime) -> SyncWindow:
 
 
 async def run_once(settings: Settings) -> SyncRun:
-    service = build_sync_service(settings)
-    return await service.run(nightly_window(datetime.now(UTC)))
+    connection = open_connection(settings.database_path)
+    try:
+        service = build_sync_service(settings, connection=connection)
+        return await service.run(nightly_window(datetime.now(UTC)))
+    finally:
+        connection.close()
 
 
 def main() -> int:

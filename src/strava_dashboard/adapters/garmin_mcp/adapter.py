@@ -97,8 +97,8 @@ class GarminMcpAdapter(GarminDataSource):
             primary_error = GarminDataError("Garmin MCP request failed")
             raise primary_error from error
         except Exception as error:
-            primary_error = GarminDataError("Garmin MCP response mapping failed")
-            raise primary_error from error
+            primary_error = error
+            raise
         except BaseException as error:
             primary_error = error
             raise

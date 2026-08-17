@@ -8,6 +8,7 @@ from strava_dashboard.domain.models import (
     RecoveryCursor,
     SleepCursor,
 )
+from strava_dashboard.ports.storage import StorageError
 
 
 class SQLiteStore:
@@ -35,7 +36,10 @@ def parse_timestamp(value: str) -> datetime:
 def cursor_for[CursorType: (ActivityCursor, SleepCursor, RecoveryCursor)](
     connection: sqlite3.Connection, family: DataFamily, cursor_type: type[CursorType]
 ) -> CursorType | None:
-    row = connection.execute("SELECT watermark FROM sync_cursors WHERE data_family = ?", (family,)).fetchone()
+    try:
+        row = connection.execute("SELECT watermark FROM sync_cursors WHERE data_family = ?", (family,)).fetchone()
+    except sqlite3.Error as error:
+        raise StorageError("SQLite cursor read failed") from error
     if row is None:
         return None
     return cursor_type(watermark=parse_timestamp(row["watermark"]))

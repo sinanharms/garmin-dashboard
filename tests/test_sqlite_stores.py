@@ -3,12 +3,14 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
+from strava_dashboard.adapters.sqlite.activity_store import SQLiteActivityStore
 from strava_dashboard.adapters.sqlite.connection import open_connection
 from strava_dashboard.adapters.sqlite.planning_store import SQLiteGoalStore, SQLitePlanStore
 from strava_dashboard.adapters.sqlite.schema import SCHEMA_VERSION, apply_schema
 from strava_dashboard.adapters.sqlite.sync_store import SQLiteSyncRunStore
 from strava_dashboard.domain.models import SyncRun, SyncStageResult
 from strava_dashboard.domain.plan_models import Goal, PlanProposal, ValidatedPlan, Workout
+from strava_dashboard.ports.storage import StorageError
 
 
 def test_connection_applies_required_sqlite_pragmas(tmp_path) -> None:
@@ -54,6 +56,14 @@ def test_future_schema_version_fails_without_destructive_changes(tmp_path) -> No
     assert connection.execute("SELECT version FROM schema_version").fetchone()[0] == SCHEMA_VERSION + 1
     assert connection.execute("SELECT value FROM sentinel").fetchone()[0] == "preserve-me"
     connection.close()
+
+
+def test_sqlite_cursor_read_failure_is_redacted_storage_error(tmp_path) -> None:
+    connection = open_connection(tmp_path / "closed.sqlite")
+    connection.close()
+
+    with pytest.raises(StorageError, match="SQLite cursor read failed"):
+        SQLiteActivityStore(connection).cursor()
 
 
 def test_sync_run_store_round_trips_typed_models(tmp_path) -> None:

@@ -52,14 +52,17 @@ class SQLiteActivityStore(SQLiteStore):
         return len(records)
 
     def between(self, start: datetime, end: datetime) -> tuple[Activity, ...]:
-        rows = self.connection.execute(
-            """
-            SELECT * FROM activities
-            WHERE started_at >= ? AND started_at < ?
-            ORDER BY started_at ASC, external_id ASC
-            """,
-            (timestamp_text(start), timestamp_text(end)),
-        ).fetchall()
+        try:
+            rows = self.connection.execute(
+                """
+                SELECT * FROM activities
+                WHERE started_at >= ? AND started_at < ?
+                ORDER BY started_at ASC, external_id ASC
+                """,
+                (timestamp_text(start), timestamp_text(end)),
+            ).fetchall()
+        except sqlite3.Error as error:
+            raise StorageError("SQLite activity read failed") from error
         return tuple(
             Activity(
                 external_id=row["external_id"],

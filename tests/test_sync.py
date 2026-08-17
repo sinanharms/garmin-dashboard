@@ -211,6 +211,7 @@ def test_failed_family_does_not_advance_cursor_or_block_other_families() -> None
     assert sleep_store.current_cursor is None
     assert recovery_store.current_cursor is not None
     assert "RAW-HEALTH-SECRET" not in repr(result)
+    assert runs.get(result.run_id) == result
 
 
 def test_storage_failure_is_redacted_and_cursor_is_preserved() -> None:

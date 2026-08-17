@@ -1,7 +1,9 @@
 import json
+import sqlite3
 from datetime import datetime
 
 from strava_dashboard.domain.models import SyncRun, SyncStageResult
+from strava_dashboard.ports.storage import StorageError
 
 from ._common import SQLiteStore, require_limit, timestamp_text
 
@@ -23,14 +25,20 @@ class SQLiteSyncRunStore(SQLiteStore):
             )
 
     def get(self, run_id: str) -> SyncRun | None:
-        row = self.connection.execute("SELECT * FROM sync_runs WHERE run_id = ?", (run_id,)).fetchone()
+        try:
+            row = self.connection.execute("SELECT * FROM sync_runs WHERE run_id = ?", (run_id,)).fetchone()
+        except sqlite3.Error as error:
+            raise StorageError("SQLite sync-run read failed") from error
         return None if row is None else self._model_from_row(row)
 
     def recent(self, limit: int) -> tuple[SyncRun, ...]:
         bounded_limit = require_limit(limit)
-        rows = self.connection.execute(
-            "SELECT * FROM sync_runs ORDER BY started_at DESC, run_id DESC LIMIT ?", (bounded_limit,)
-        ).fetchall()
+        try:
+            rows = self.connection.execute(
+                "SELECT * FROM sync_runs ORDER BY started_at DESC, run_id DESC LIMIT ?", (bounded_limit,)
+            ).fetchall()
+        except sqlite3.Error as error:
+            raise StorageError("SQLite sync-run read failed") from error
         return tuple(self._model_from_row(row) for row in rows)
 
     @staticmethod

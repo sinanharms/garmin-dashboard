@@ -1,6 +1,8 @@
+import sqlite3
 from datetime import date, datetime
 
 from strava_dashboard.domain.plan_models import Goal, PlanProposal, ValidatedPlan, Workout
+from strava_dashboard.ports.storage import StorageError
 
 from ._common import SQLiteStore, date_text, timestamp_text
 
@@ -19,7 +21,10 @@ class SQLiteGoalStore(SQLiteStore):
             )
 
     def current(self) -> Goal | None:
-        row = self.connection.execute("SELECT * FROM goals ORDER BY target_date ASC, goal_id ASC LIMIT 1").fetchone()
+        try:
+            row = self.connection.execute("SELECT * FROM goals ORDER BY target_date ASC, goal_id ASC LIMIT 1").fetchone()
+        except sqlite3.Error as error:
+            raise StorageError("SQLite goal read failed") from error
         if row is None:
             return None
         return Goal(goal_id=row["goal_id"], description=row["description"], target_date=date.fromisoformat(row["target_date"]))
@@ -61,13 +66,19 @@ class SQLitePlanStore(SQLiteStore):
             )
 
     def current(self) -> ValidatedPlan | None:
-        row = self.connection.execute("SELECT * FROM plans ORDER BY validated_at DESC, proposal_id DESC LIMIT 1").fetchone()
+        try:
+            row = self.connection.execute("SELECT * FROM plans ORDER BY validated_at DESC, proposal_id DESC LIMIT 1").fetchone()
+        except sqlite3.Error as error:
+            raise StorageError("SQLite plan read failed") from error
         if row is None:
             return None
-        workouts = self.connection.execute(
-            "SELECT * FROM plan_workouts WHERE proposal_id = ? ORDER BY scheduled_date ASC, workout_id ASC",
-            (row["proposal_id"],),
-        ).fetchall()
+        try:
+            workouts = self.connection.execute(
+                "SELECT * FROM plan_workouts WHERE proposal_id = ? ORDER BY scheduled_date ASC, workout_id ASC",
+                (row["proposal_id"],),
+            ).fetchall()
+        except sqlite3.Error as error:
+            raise StorageError("SQLite plan workout read failed") from error
         proposal = PlanProposal(
             proposal_id=row["proposal_id"],
             goal_id=row["goal_id"],
