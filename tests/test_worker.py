@@ -8,7 +8,7 @@ from typing import cast
 import pytest
 
 from garmin_dashboard import worker
-from garmin_dashboard.config import Settings
+from garmin_dashboard.config.settings import Settings
 from garmin_dashboard.domain.models import SyncRun
 
 

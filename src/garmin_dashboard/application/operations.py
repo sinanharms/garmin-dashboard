@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from garmin_dashboard.adapters.sqlite.connection import SQLiteConnection
-from garmin_dashboard.config import Settings
+from garmin_dashboard.config.settings import Settings
 from garmin_dashboard.ports.backups import is_generated_backup_id
 from garmin_dashboard.ports.storage import BackupStore, StorageError
 

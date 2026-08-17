@@ -9,7 +9,7 @@ from garmin_dashboard.adapters.sqlite.activity_store import SQLiteActivityStore
 from garmin_dashboard.adapters.sqlite.backup import SQLiteBackupStore
 from garmin_dashboard.adapters.sqlite.connection import open_connection
 from garmin_dashboard.application.operations import OperationsService
-from garmin_dashboard.config import Settings
+from garmin_dashboard.config.settings import Settings
 from garmin_dashboard.domain.models import Activity, ActivityCursor
 
 BASE = datetime(2026, 8, 17, tzinfo=UTC)

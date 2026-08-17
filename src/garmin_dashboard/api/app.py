@@ -19,7 +19,7 @@ from garmin_dashboard.api.routes_dashboard import router as dashboard_router
 from garmin_dashboard.api.routes_dev import router as dev_router
 from garmin_dashboard.application.dashboard import DashboardService, SQLiteInspectionService
 from garmin_dashboard.application.operations import OperationsService
-from garmin_dashboard.config import Settings
+from garmin_dashboard.config.settings import Settings
 from garmin_dashboard.ports.storage import StorageError
 
 BASE_DIR = Path(__file__).parent

@@ -9,7 +9,7 @@ from garmin_dashboard.adapters.sqlite.recovery_store import SQLiteRecoveryStore
 from garmin_dashboard.adapters.sqlite.sleep_store import SQLiteSleepStore
 from garmin_dashboard.adapters.sqlite.sync_store import SQLiteSyncRunStore
 from garmin_dashboard.application.sync import SyncService
-from garmin_dashboard.config import Settings
+from garmin_dashboard.config.settings import Settings
 from garmin_dashboard.domain.models import SyncRun, SyncWindow
 
 INITIAL_LOOKBACK_DAYS = 30

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from garmin_dashboard.config import Settings
+from garmin_dashboard.config.settings import Settings
 
 
 def set_required_environment(monkeypatch, tmp_path):

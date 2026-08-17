@@ -23,7 +23,7 @@ from garmin_dashboard.application.operations import (
     FreshnessHealth,
     OperationsHealth,
 )
-from garmin_dashboard.config import Settings
+from garmin_dashboard.config.settings import Settings
 from garmin_dashboard.domain.models import (
     Activity,
     HealthSummary,
