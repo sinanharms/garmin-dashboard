@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { StatusBadge, type Status } from "../StatusBadge/StatusBadge";
 import styles from "./MetricCard.module.css";
 
@@ -20,7 +20,7 @@ const statusLabels: Record<Status, string> = {
 };
 
 export function MetricCard({ title, value, detail, status, expanded, onToggle }: MetricCardProps) {
-  const detailId = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-detail`;
+  const detailId = `${useId()}-detail`;
 
   return (
     <article className={`${styles.card} ${expanded ? styles.expanded : ""}`}>
@@ -28,7 +28,7 @@ export function MetricCard({ title, value, detail, status, expanded, onToggle }:
         className={styles.header}
         type="button"
         aria-expanded={expanded}
-        aria-controls={detail ? detailId : undefined}
+        aria-controls={expanded && detail ? detailId : undefined}
         onClick={onToggle}
       >
         <span className={styles.title}>{title}</span>

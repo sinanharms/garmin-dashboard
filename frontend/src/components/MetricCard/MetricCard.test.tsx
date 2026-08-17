@@ -48,6 +48,27 @@ describe("MetricCard", () => {
       "aria-expanded",
       "true",
     );
+    expect(screen.getByRole("button", { name: /training load/i })).toHaveAttribute(
+      "aria-controls",
+      screen.getByText("History").parentElement?.id,
+    );
+  });
+
+  it("omits collapsed controls and gives same-title cards unique detail IDs", () => {
+    const { container } = render(
+      <>
+        <MetricCard title="Training load" value="60" expanded={false} onToggle={vi.fn()} detail={<p>First</p>} />
+        <MetricCard title="Training load" value="70" expanded onToggle={vi.fn()} detail={<p>Second</p>} />
+        <MetricCard title="Training load" value="80" expanded onToggle={vi.fn()} detail={<p>Third</p>} />
+      </>,
+    );
+
+    const buttons = screen.getAllByRole("button", { name: /training load/i });
+    expect(buttons[0]).not.toHaveAttribute("aria-controls");
+    expect(buttons[1]).toHaveAttribute("aria-controls");
+    expect(buttons[2]).toHaveAttribute("aria-controls");
+    const detailIds = [...container.querySelectorAll("[id$='-detail']")].map((element) => element.id);
+    expect(new Set(detailIds).size).toBe(detailIds.length);
   });
 });
 

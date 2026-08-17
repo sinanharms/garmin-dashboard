@@ -33,3 +33,31 @@ Coverage includes card interaction and `aria-expanded`, summary preservation dur
 
 - `TrendChart` currently accepts numeric points; date labels and domain-specific series mapping belong to the later dashboard/detail tasks.
 - Formatter output uses metric kilometers and compact `h`/`m` units; locale-specific formatting can be introduced if the approved UI requirements later call for it.
+
+## Reviewer fix wave
+
+Applied all requested Important findings:
+
+- `MetricCard` now uses React `useId()` for detail IDs, so same-title cards do not collide.
+- `aria-controls` is omitted while collapsed and included only when expanded detail is mounted.
+- Added formatter regression coverage for null/unavailable values, duration boundaries, and distance rounding including the 1,450 m half-up boundary.
+- Removed generated `frontend/node_modules` before verification/commit.
+
+### Commands and results
+
+```text
+docker compose config --quiet
+Result: exit_code=0 (no environment values rendered)
+
+docker run --rm -v "$PWD/frontend:/frontend" -w /frontend node:22-bookworm-slim sh -c 'npm test'
+Result: 5 test files passed, 14 tests passed
+
+docker run --rm -v "$PWD/frontend:/frontend" -w /frontend node:22-bookworm-slim sh -c 'npm run typecheck'
+Result: exit code 0
+
+docker run --rm -v "$PWD/frontend:/frontend" -w /frontend node:22-bookworm-slim sh -c 'npm run build'
+Result: exit code 0; Vite production build completed
+
+docker run --rm -v "$PWD/frontend:/frontend" -w /frontend node:22-bookworm-slim sh -c 'npm test -- --run src/components/MetricCard/MetricCard.test.tsx src/components/formatters.test.ts'
+Result: 2 test files passed, 9 tests passed
+```

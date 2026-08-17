@@ -10,5 +10,6 @@ export function formatDuration(seconds: number | null): string {
 
 export function formatDistance(meters: number | null): string {
   if (meters === null) return "Unavailable";
-  return `${(meters / 1000).toFixed(1)} km`;
+  const kilometers = Math.round((meters / 1000) * 10) / 10;
+  return `${kilometers.toFixed(1)} km`;
 }
