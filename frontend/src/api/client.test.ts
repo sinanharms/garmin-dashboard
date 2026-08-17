@@ -7,6 +7,7 @@ describe("dashboard API client", () => {
   });
 
   it("requests the dashboard endpoint and returns typed JSON", async () => {
+    const controller = new AbortController();
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -14,12 +15,12 @@ describe("dashboard API client", () => {
       ),
     );
 
-    await expect(getDashboard("2026-08-17")).resolves.toMatchObject({
+    await expect(getDashboard("2026-08-17", controller.signal)).resolves.toMatchObject({
       health_status: "missing",
     });
     expect(fetch).toHaveBeenCalledWith(
       "/api/dashboard?today=2026-08-17",
-      expect.objectContaining({ headers: { Accept: "application/json" } }),
+      expect.objectContaining({ headers: { Accept: "application/json" }, signal: controller.signal }),
     );
   });
 

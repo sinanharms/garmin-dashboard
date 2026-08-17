@@ -1,6 +1,6 @@
 .chart { min-width: 0; }
 .summary, .empty { color: var(--color-muted); font-size: 0.85rem; margin: 0 0 0.75rem; }
 .visual { display: block; height: auto; max-width: 100%; width: 100%; }
-.line, .area { fill: none; stroke-linejoin: round; stroke-linecap: round; stroke-width: 3; }
+.line { fill: none; stroke-linejoin: round; stroke-linecap: round; stroke-width: 3; }
 .line { stroke: var(--color-accent); }
-.area { fill: color-mix(in srgb, var(--color-accent) 18%, transparent); stroke: none; }
+.point { fill: var(--color-accent); }

@@ -18,11 +18,15 @@ describe("useDashboard", () => {
   it("loads dashboard data and retries a failed request", async () => {
     mockedGetDashboard.mockRejectedValueOnce(new Error("request failed")).mockResolvedValueOnce(view);
     const { result } = renderHook(() => useDashboard());
+    const firstSignal = mockedGetDashboard.mock.calls[0]?.[1];
+
+    expect(firstSignal).toBeInstanceOf(AbortSignal);
 
     await waitFor(() => expect(result.current.status).toBe("error"));
     expect(result.current).not.toHaveProperty("data");
 
     act(() => result.current.retry());
+    expect(firstSignal?.aborted).toBe(true);
     expect(result.current.status).toBe("loading");
     await waitFor(() => expect(result.current).toMatchObject({ status: "success", data: view }));
     expect(mockedGetDashboard).toHaveBeenCalledTimes(2);

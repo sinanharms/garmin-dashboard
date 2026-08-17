@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError, getTrends } from "../../api/client";
 import type { RequestState } from "../../api/requestState";
 import type { TrendQuery, TrendSnapshot } from "../../api/types";
@@ -10,8 +10,10 @@ function requestError(error: unknown): ApiError {
   return error instanceof ApiError ? error : new ApiError(0, "Trends request failed");
 }
 
-export function useTrendDetails(query: TrendQuery | null): RequestState<TrendSnapshot> {
+export function useTrendDetails(query: TrendQuery | null): RequestState<TrendSnapshot> & { retry: () => void } {
   const [state, setState] = useState<RequestState<TrendSnapshot>>({ status: "idle" });
+  const [requestId, setRequestId] = useState(0);
+  const retry = useCallback(() => setRequestId((current) => current + 1), []);
   const start = query?.start;
   const end = query?.end;
   const bucket = query?.bucket;
@@ -41,7 +43,7 @@ export function useTrendDetails(query: TrendQuery | null): RequestState<TrendSna
       });
 
     return () => controller.abort();
-  }, [start, end, bucket]);
+  }, [start, end, bucket, requestId]);
 
-  return state;
+  return { ...state, retry };
 }

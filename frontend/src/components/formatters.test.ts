@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDistance, formatDuration } from "./formatters";
+import { formatDistance, formatDuration, formatInclusivePeriod } from "./formatters";
 
 describe("formatDuration", () => {
   it("renders unavailable values explicitly", () => {
@@ -25,5 +25,13 @@ describe("formatDistance", () => {
     expect(formatDistance(1449)).toBe("1.4 km");
     expect(formatDistance(1450)).toBe("1.5 km");
     expect(formatDistance(1499)).toBe("1.5 km");
+  });
+});
+
+describe("formatInclusivePeriod", () => {
+  it("renders an exclusive API end as the inclusive human date", () => {
+    expect(formatInclusivePeriod("2026-08-10", "2026-08-18")).toBe(
+      "2026-08-10 – 2026-08-17",
+    );
   });
 });

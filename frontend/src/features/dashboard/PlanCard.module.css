@@ -1,0 +1,7 @@
+.card {
+  background: color-mix(in srgb, var(--color-purple) 8%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-purple) 45%, var(--color-border)) !important;
+}
+
+.week { color: var(--color-purple); font-size: 0.85rem; font-weight: 700; }
+.explanation { color: var(--color-muted); display: block; font-size: 0.85rem; margin-top: 0.25rem; }

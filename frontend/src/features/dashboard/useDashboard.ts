@@ -12,7 +12,7 @@ export function useDashboard(): RequestState<DashboardView> & { retry: () => voi
     const controller = new AbortController();
     setState({ status: "loading" });
 
-    getDashboard().then(
+    getDashboard(undefined, controller.signal).then(
       (data) => { if (!controller.signal.aborted) setState({ status: "success", data }); },
       (error: unknown) => {
         if (!controller.signal.aborted) {

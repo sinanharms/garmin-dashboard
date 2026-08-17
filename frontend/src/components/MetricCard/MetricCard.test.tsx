@@ -14,6 +14,8 @@ describe("MetricCard", () => {
       <MetricCard
         title="Training load"
         value="60"
+        unit="points"
+        supporting="7 activities · 42.0 km"
         expanded={false}
         onToggle={onToggle}
         detail={<p>History</p>}
@@ -21,6 +23,8 @@ describe("MetricCard", () => {
     );
 
     expect(screen.getByText("60")).toBeVisible();
+    expect(screen.getByText("points")).toBeVisible();
+    expect(screen.getByText("7 activities · 42.0 km")).toBeVisible();
     expect(screen.queryByText("History")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /training load/i })).toHaveAttribute(
       "aria-expanded",
@@ -36,6 +40,8 @@ describe("MetricCard", () => {
       <MetricCard
         title="Training load"
         value="60"
+        unit="points"
+        supporting="7 activities · 42.0 km"
         expanded
         onToggle={vi.fn()}
         detail={<p>History</p>}
@@ -43,6 +49,8 @@ describe("MetricCard", () => {
     );
 
     expect(screen.getByText("60")).toBeVisible();
+    expect(screen.getByText("points")).toBeVisible();
+    expect(screen.getByText("7 activities · 42.0 km")).toBeVisible();
     expect(screen.getByText("History")).toBeVisible();
     expect(screen.getByRole("button", { name: /training load/i })).toHaveAttribute(
       "aria-expanded",

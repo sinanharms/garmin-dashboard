@@ -22,9 +22,9 @@ async function requestJson<T>(url: string, failureMessage: string, signal?: Abor
   return (await response.json()) as T;
 }
 
-export function getDashboard(today?: string): Promise<DashboardView> {
+export function getDashboard(today?: string, signal?: AbortSignal): Promise<DashboardView> {
   const query = today === undefined ? "" : `?today=${encodeURIComponent(today)}`;
-  return requestJson<DashboardView>(`/api/dashboard${query}`, "Dashboard request failed");
+  return requestJson<DashboardView>(`/api/dashboard${query}`, "Dashboard request failed", signal);
 }
 
 export function getTrends(query: TrendQuery, signal?: AbortSignal): Promise<TrendSnapshot> {

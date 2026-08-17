@@ -13,3 +13,14 @@ export function formatDistance(meters: number | null): string {
   const kilometers = Math.round((meters / 1000) * 10) / 10;
   return `${kilometers.toFixed(1)} km`;
 }
+
+export function offsetIsoDate(value: string, days: number): string {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatInclusivePeriod(start: string, exclusiveEnd: string): string {
+  return `${start} – ${offsetIsoDate(exclusiveEnd, -1)}`;
+}

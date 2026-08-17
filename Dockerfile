@@ -5,7 +5,19 @@ RUN npm ci
 COPY frontend ./
 RUN npm run build
 
-FROM python:3.14-slim
+FROM frontend AS frontend-checks
+RUN npm test
+RUN npm run lint
+RUN npm run typecheck
+
+FROM mcr.microsoft.com/playwright:v1.61.0-noble AS browser-smoke
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend ./
+CMD ["npm", "run", "test:browser"]
+
+FROM python:3.14-slim AS application
 
 COPY --from=ghcr.io/astral-sh/uv:0.10.3 /uv /uvx /bin/
 WORKDIR /app

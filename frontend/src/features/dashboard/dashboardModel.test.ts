@@ -40,6 +40,12 @@ describe("buildMetricSummaries", () => {
       "recovery",
     ]);
     expect(summaries.find((item) => item.id === "training-load")?.value).toBe("60");
+    expect(summaries.find((item) => item.id === "activity-volume")).toMatchObject({
+      supporting: "1 activity · 10.0 km · running: 1",
+    });
+    expect(summaries.find((item) => item.id === "elevation")?.unit).toBe("m");
+    expect(summaries.find((item) => item.id === "sleep")?.supporting).toBe("Sleep score 82");
+    expect(summaries.find((item) => item.id === "recovery")?.unit).toBe("percent");
     expect(summaries.find((item) => item.id === "recovery")?.status).toBe("available");
   });
 

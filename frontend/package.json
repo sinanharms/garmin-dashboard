@@ -5,14 +5,17 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "lint": "oxlint src",
     "typecheck": "tsc -b --pretty false",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "react": "latest",
     "react-dom": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "1.61.0",
     "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
     "@testing-library/user-event": "latest",
@@ -20,6 +23,7 @@
     "@types/react-dom": "latest",
     "@vitejs/plugin-react-swc": "latest",
     "jsdom": "latest",
+    "oxlint": "1.78.0",
     "typescript": "latest",
     "vite": "latest",
     "vitest": "latest"
