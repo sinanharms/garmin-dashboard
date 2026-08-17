@@ -9,3 +9,5 @@ Run focused checks with `docker compose run --rm app uv run pytest tests/test_co
 Keep runtime configuration in `strava_dashboard.config.Settings`, preserve explicit environment aliases, and keep source files under 300 lines.
 
 Use Pydantic v2 `BaseModel` for all domain, port, application, API, and adapter data models. Configure immutable models with `ConfigDict(frozen=True)` and use tuple-typed collections where runtime immutability is required. Do not introduce dataclasses for application data.
+
+Operational workflow is Docker-first. Use `docker compose config` before startup, `docker compose up --build` for the app, `docker compose run --rm app bash scripts/garmin-auth.sh` for one-time Garmin MFA bootstrap, and `docker compose run --rm scheduler uv run python -m strava_dashboard.worker` for an explicit manual sync. Check `/api/dev/garmin/health` and `/api/dev/storage/health` through the loopback-bound app port. Stop both services before restoring a compressed SQLite backup. Never print `.env`, Garmin credentials, token-volume contents, MCP responses, or backup paths containing secrets.
