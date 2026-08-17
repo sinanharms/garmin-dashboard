@@ -2,7 +2,7 @@
 
 Personal, single-user Garmin training dashboard. It imports activities, sleep, and recovery data through the Garmin MCP stdio server, stores normalized records in SQLite, and serves a local FastAPI dashboard.
 
-Current web UI is a small static HTML/JavaScript dashboard. A React redesign is specified but not implemented; see [planned work](docs/stories/react-dashboard.md).
+The browser UI is a React build served by FastAPI at `/`; its Vite assets are served at `/static/app/`. Docker builds the frontend in a Node stage and copies its production output into the final application image. Browser API requests remain same-origin under `/api`.
 
 ## Quick start
 

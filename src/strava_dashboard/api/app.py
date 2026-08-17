@@ -57,6 +57,8 @@ def create_app(
     inspection_service=None,
     operations_service=None,
     settings: Settings | None = None,
+    *,
+    frontend_dir: Path | None = None,
 ) -> FastAPI:
     if (dashboard_service is None) != (inspection_service is None):
         raise ValueError("dashboard and inspection services must be injected together")
@@ -77,16 +79,17 @@ def create_app(
             if injected is None:
                 services.close()
 
+    frontend_directory = frontend_dir or BASE_DIR / "static" / "app"
     application = FastAPI(title="Garmin Training Dashboard", lifespan=lifespan)
     if injected is not None:
         application.state.services = injected
     application.include_router(dashboard_router)
     application.include_router(dev_router)
-    application.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+    application.mount("/static/app", StaticFiles(directory=frontend_directory), name="frontend")
 
     @application.get("/", include_in_schema=False)
     def dashboard_shell() -> FileResponse:
-        return FileResponse(BASE_DIR / "templates" / "index.html")
+        return FileResponse(frontend_directory / "index.html")
 
     @application.exception_handler(StorageError)
     async def storage_error(_request: Request, _error: StorageError) -> JSONResponse:

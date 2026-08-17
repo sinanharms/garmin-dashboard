@@ -258,25 +258,16 @@ def test_unexpected_route_errors_are_redacted() -> None:
     assert "secret database path" not in response.text
 
 
-def test_dashboard_shell_isolated_from_api_and_static_assets() -> None:
-    api = client()
+def test_dashboard_shell_serves_built_react_index(tmp_path: Path) -> None:
+    app = create_app(
+        FakeDashboardService(),
+        FakeInspectionService(),
+        FakeOperationsService(),
+        frontend_dir=tmp_path,
+    )
+    (tmp_path / "index.html").write_text('<div id="root">Garmin Training Dashboard</div>', encoding="utf-8")
 
-    page = api.get("/")
-    stylesheet = api.get("/static/dashboard.css")
-    script = api.get("/static/dashboard.js")
+    response = TestClient(app).get("/")
 
-    assert page.status_code == 200
-    assert "Garmin Training Dashboard" in page.text
-    assert "/api/dashboard" in page.text
-    assert stylesheet.status_code == 200
-    assert script.status_code == 200
-    assert 'id="weekly-plan-content"' in page.text
-    assert 'id="sleep-detail"' in page.text
-    assert 'id="recovery-detail"' in page.text
-    for field in ("health_status", "average_sleep_seconds", "average_sleep_score", "recovery_metrics"):
-        assert field in script.text
-    assert "proposal.week_start" in script.text
-    assert "proposal?.workouts" in script.text
-    assert "Weekly plan unavailable" in script.text
-    assert "Sleep: unavailable" in script.text
-    assert "Recovery: unavailable" in script.text
+    assert response.status_code == 200
+    assert response.text == '<div id="root">Garmin Training Dashboard</div>'

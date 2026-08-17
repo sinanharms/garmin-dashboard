@@ -19,6 +19,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 RUN uv tool install --python 3.14 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp
 
 COPY src ./src
+COPY --from=frontend /frontend/dist ./src/strava_dashboard/api/static/app
 COPY scripts ./scripts
 RUN uv sync --frozen --no-dev
 ENV PATH="/root/.local/bin:/app/.venv/bin:$PATH"
