@@ -60,6 +60,8 @@ class GarminMcpAdapter(GarminDataSource):
                     continue
                 if not isinstance(payload, Mapping):
                     raise GarminDataError("Garmin MCP sleep response was malformed")
+                if not payload:
+                    continue
                 records.extend(map_sleep(cast(Mapping[str, object], payload), day, timezone))
             return tuple(records)
 

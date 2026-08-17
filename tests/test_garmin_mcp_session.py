@@ -98,6 +98,25 @@ def test_stdio_session_parses_actual_json_text_envelope(monkeypatch: pytest.Monk
     assert asyncio.run(exercise()) == {"activities": [], "has_more": False}
 
 
+def test_stdio_session_unwraps_structured_result_json(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    captured: dict[str, Any] = {}
+    install_stdio_fakes(monkeypatch, captured)
+    FakeSdkSession.response = SimpleNamespace(
+        is_error=False,
+        content=[],
+        structured_content={"result": json.dumps({"activities": [], "has_more": False})},
+    )
+
+    async def exercise() -> Mapping[str, object]:
+        session = await StdioMcpSessionFactory("garmin-mcp", tmp_path / "tokens", 30).open()
+        try:
+            return cast(Mapping[str, object], await session.call_tool("fixture_tool", {}))
+        finally:
+            await session.close()
+
+    assert asyncio.run(exercise()) == {"activities": [], "has_more": False}
+
+
 def test_stdio_session_redacts_json_parse_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     captured: dict[str, Any] = {}
     install_stdio_fakes(monkeypatch, captured)

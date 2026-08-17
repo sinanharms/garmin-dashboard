@@ -23,6 +23,15 @@ class FakeService:
         return SyncRun(run_id="run-1", started_at=now, ended_at=now + timedelta(seconds=1), stages=())
 
 
+def test_sync_window_includes_initial_history() -> None:
+    now = datetime(2026, 8, 17, tzinfo=UTC)
+
+    window = worker.sync_window(now)
+
+    assert window.start == now - timedelta(days=30)
+    assert window.end == now
+
+
 @pytest.mark.parametrize("failure", [None, RuntimeError("sync failed")])
 def test_run_once_closes_connection_on_success_and_failure(monkeypatch, failure: BaseException | None) -> None:
     connection = sqlite3.connect(":memory:")

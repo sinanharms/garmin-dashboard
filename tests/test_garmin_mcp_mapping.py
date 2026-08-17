@@ -58,3 +58,30 @@ def test_map_recovery_rejects_malformed_present_metric() -> None:
 
     with pytest.raises(GarminDataError, match="last_night_avg_hrv_ms"):
         mapping.map_recovery(payload, UTC)
+
+
+def test_map_recovery_skips_metrics_without_measurement_timestamp() -> None:
+    payload = {
+        "date": "2024-01-15",
+        "last_night_avg_hrv_ms": 48,
+        "weekly_avg_hrv_ms": 45,
+    }
+
+    assert mapping.map_recovery(payload, UTC) == ()
+
+
+def test_map_activities_normalizes_fractional_duration_seconds() -> None:
+    payload = {
+        "activities": [
+            {
+                "id": 1,
+                "type": "running",
+                "start_time": "2024-01-15T07:30:00",
+                "duration_seconds": 123.75,
+            }
+        ]
+    }
+
+    activities = mapping.map_activities(payload, UTC)
+
+    assert activities[0].duration_seconds == 123

@@ -1,5 +1,6 @@
 from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime, time, tzinfo
+from math import isfinite
 from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict
@@ -128,6 +129,8 @@ def map_sleep(payload: Mapping[str, object], requested_local_date: date, local_t
 
 def map_recovery(payload: Mapping[str, object], local_timezone: tzinfo) -> tuple[RecoverySignal, ...]:
     local_date = _required_date(payload, "date")
+    if payload.get("sleep_end") is None:
+        return ()
     measured_at = _naive_timestamp(payload, "sleep_end", local_timezone)
     signals: list[RecoverySignal] = []
     for metric_name in HRV_METRICS:
@@ -153,7 +156,7 @@ def _map_activity(row: Mapping[str, object], local_timezone: tzinfo) -> Activity
         activity_type=_required_text(row, "type"),
         started_at=started_at,
         local_date=started_at.date(),
-        duration_seconds=_required_int(row, "duration_seconds"),
+        duration_seconds=_required_seconds(row, "duration_seconds"),
         distance_meters=_optional_float(row, "distance_meters"),
         elevation_meters=_optional_float(row, "elevation_gain_meters"),
         average_heart_rate=_optional_float(row, "avg_hr_bpm"),
@@ -179,6 +182,13 @@ def _required_text(payload: Mapping[str, object], key: str) -> str:
 def _required_int(payload: Mapping[str, object], key: str) -> int:
     value = payload.get(key)
     if isinstance(value, bool) or not isinstance(value, (int, float)) or int(value) != value or value < 0:
+        raise GarminDataError(f"missing or malformed field: {key}")
+    return int(value)
+
+
+def _required_seconds(payload: Mapping[str, object], key: str) -> int:
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(float(value)) or value < 0:
         raise GarminDataError(f"missing or malformed field: {key}")
     return int(value)
 

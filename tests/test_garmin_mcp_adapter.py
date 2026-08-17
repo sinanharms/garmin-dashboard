@@ -174,6 +174,15 @@ def test_fetch_sleep_treats_upstream_no_data_reply_as_empty() -> None:
     assert session.closed
 
 
+def test_fetch_sleep_treats_empty_mapping_as_empty() -> None:
+    session = FakeSession({"get_sleep_summary": {}})
+
+    sleep = asyncio.run(GarminMcpAdapter(FakeSessionFactory(session)).fetch_sleep(sync_window()))
+
+    assert sleep == ()
+    assert session.closed
+
+
 def test_fetch_recovery_maps_each_fixture_metric() -> None:
     session = FakeSession({"get_hrv_data": load_fixture("garmin_recovery.json")})
     adapter = GarminMcpAdapter(FakeSessionFactory(session))

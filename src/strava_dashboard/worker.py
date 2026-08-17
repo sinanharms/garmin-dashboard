@@ -12,6 +12,8 @@ from strava_dashboard.application.sync import SyncService
 from strava_dashboard.config import Settings
 from strava_dashboard.domain.models import SyncRun, SyncWindow
 
+INITIAL_LOOKBACK_DAYS = 30
+
 
 def build_sync_service(settings: Settings, connection: SQLiteConnection | None = None) -> SyncService:
     owns_connection = connection is None
@@ -36,17 +38,17 @@ def build_sync_service(settings: Settings, connection: SQLiteConnection | None =
         raise
 
 
-def nightly_window(now: datetime) -> SyncWindow:
+def sync_window(now: datetime) -> SyncWindow:
     if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("worker clock must be timezone-aware")
-    return SyncWindow(start=now - timedelta(days=1), end=now)
+    return SyncWindow(start=now - timedelta(days=INITIAL_LOOKBACK_DAYS), end=now)
 
 
 async def run_once(settings: Settings) -> SyncRun:
     connection = open_connection(settings.database_path)
     try:
         service = build_sync_service(settings, connection=connection)
-        return await service.run(nightly_window(datetime.now(UTC)))
+        return await service.run(sync_window(datetime.now(UTC)))
     finally:
         connection.close()
 

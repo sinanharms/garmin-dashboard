@@ -94,6 +94,11 @@ class _SdkMcpSession:
 def _result_mapping(response: object, tool_name: str) -> Mapping[str, object] | str:
     structured = getattr(response, "structured_content", None)
     if isinstance(structured, Mapping):
+        if set(structured) == {"result"}:
+            result = structured["result"]
+            if isinstance(result, str):
+                return _decode_json_text(result, tool_name)
+            return _validated_mapping(result)
         return _validated_mapping(structured)
 
     content = getattr(response, "content", None)
@@ -102,15 +107,25 @@ def _result_mapping(response: object, tool_name: str) -> Mapping[str, object] | 
     item = content[0]
     if getattr(item, "type", None) != "text" or not isinstance(getattr(item, "text", None), str):
         raise McpSessionError("MCP tool returned malformed content")
+    return _decode_json_text(item.text, tool_name)
+
+
+def _decode_json_text(text: str, tool_name: str) -> Mapping[str, object] | str:
     try:
-        decoded = json.loads(item.text)
+        decoded = json.loads(text)
     except TypeError, json.JSONDecodeError:
-        if tool_name == "get_sleep_summary" and item.text.startswith("No sleep summary found"):
-            return item.text
-        if tool_name == "get_hrv_data" and item.text.startswith("No HRV data found"):
-            return item.text
+        if _is_empty_result(text, tool_name):
+            return text
         raise McpSessionError("MCP tool returned malformed JSON content") from None
+    if isinstance(decoded, str) and _is_empty_result(decoded, tool_name):
+        return decoded
     return _validated_mapping(decoded)
+
+
+def _is_empty_result(value: str, tool_name: str) -> bool:
+    return (tool_name == "get_sleep_summary" and value.startswith("No sleep summary found")) or (
+        tool_name == "get_hrv_data" and value.startswith("No HRV data found")
+    )
 
 
 def _validated_mapping(value: object) -> Mapping[str, object]:

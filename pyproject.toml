@@ -1,5 +1,5 @@
 [project]
-name = "strava-dashboard"
+name = "garmin-dashboard"
 version = "0.1.0"
 description = "Personal Garmin training dashboard"
 readme = "README.md"

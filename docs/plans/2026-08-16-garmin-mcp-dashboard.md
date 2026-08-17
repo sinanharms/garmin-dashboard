@@ -100,14 +100,14 @@ scripts/garmin-auth.sh
 ## Task 1: Establish validated configuration and container workflow
 
 **Files:**
-- Modify: `pyproject.toml`
-- Modify: `README.md`
-- Create: `src/strava_dashboard/config.py`
-- Create: `tests/test_config.py`
-- Create: `Dockerfile`
-- Create: `compose.yaml`
-- Create: `.dockerignore`
-- Create: `AGENTS.md`
+- Modify: `../../pyproject.toml`
+- Modify: `../../README.md`
+- Create: `../../src/strava_dashboard/config.py`
+- Create: `../../tests/test_config.py`
+- Create: `../../Dockerfile`
+- Create: `../../compose.yaml`
+- Create: `../../.dockerignore`
+- Create: `../../AGENTS.md`
 
 **Interfaces:**
 - Produces `Settings` for all runtime wiring.
@@ -115,7 +115,7 @@ scripts/garmin-auth.sh
 
 - [ ] **Step 1: Add the runtime dependencies and metadata.**
 
-Update `pyproject.toml` dependencies with `pydantic>=2.0`, `pydantic-settings>=2.0`, `mcp>=1.0`, `fastapi>=0.100`, `uvicorn[standard]>=0.20`, and `httpx>=0.20`. Keep existing dev tools. Change the project description and README title from Strava to Garmin training dashboard. Regenerate `uv.lock` using the project’s uv workflow; do not hand-edit the lock file.
+Update `../../pyproject.toml` dependencies with `pydantic>=2.0`, `pydantic-settings>=2.0`, `mcp>=1.0`, `fastapi>=0.100`, `uvicorn[standard]>=0.20`, and `httpx>=0.20`. Keep existing dev tools. Change the project description and README title from Strava to Garmin training dashboard. Regenerate `../../uv.lock` using the project’s uv workflow; do not hand-edit the lock file.
 
 - [ ] **Step 2: Write failing configuration tests.**
 
@@ -159,7 +159,7 @@ Expected: FAIL because `Settings` does not exist.
 
 - [ ] **Step 3: Implement `Settings` with explicit environment aliases.**
 
-Create `src/strava_dashboard/config.py`:
+Create `../../src/strava_dashboard/config.py`:
 
 ```python
 from pathlib import Path
@@ -211,9 +211,9 @@ RUN uv sync --frozen --no-dev
 ENV PATH="/root/.local/bin:/app/.venv/bin:$PATH"
 ```
 
-Use one application image with separate `app` and `scheduler` commands. Mount SQLite/backups and Garmin token state as named volumes. Bind the web port to loopback only. Do not define a `garmin-mcp` HTTP service or publish port 8000. Add `.dockerignore` entries for `.git`, `.venv`, `__pycache__`, `.pytest_cache`, `.env`, and local database/backup files.
+Use one application image with separate `app` and `scheduler` commands. Mount SQLite/backups and Garmin token state as named volumes. Bind the web port to loopback only. Do not define a `garmin-mcp` HTTP service or publish port 8000. Add `../../.dockerignore` entries for `.git`, `.venv`, `__pycache__`, `.pytest_cache`, `../../.env`, and local database/backup files.
 
-`compose.yaml` must provide the settings explicitly:
+`../../compose.yaml` must provide the settings explicitly:
 
 ```yaml
 services:
