@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from strava_dashboard.adapters.sqlite.activity_store import SQLiteActivityStore
+from strava_dashboard.adapters.sqlite.backup import SQLiteBackupStore
 from strava_dashboard.adapters.sqlite.connection import open_connection
 from strava_dashboard.adapters.sqlite.planning_store import SQLiteGoalStore, SQLitePlanStore
 from strava_dashboard.adapters.sqlite.recovery_store import SQLiteRecoveryStore
@@ -17,6 +18,7 @@ from strava_dashboard.api.dependencies import AppServices
 from strava_dashboard.api.routes_dashboard import router as dashboard_router
 from strava_dashboard.api.routes_dev import router as dev_router
 from strava_dashboard.application.dashboard import DashboardService, SQLiteInspectionService
+from strava_dashboard.application.operations import OperationsService
 from strava_dashboard.config import Settings
 from strava_dashboard.ports.storage import StorageError
 
@@ -27,6 +29,14 @@ def build_production_services(settings: Settings) -> AppServices:
     connection = open_connection(settings.database_path)
     try:
         runs = SQLiteSyncRunStore(connection)
+        backup_store = SQLiteBackupStore(
+            connection,
+            settings.backup_dir,
+            settings.backup_retention_count,
+            settings.backup_retention_days,
+            lambda: datetime.now(UTC),
+        )
+        operations = OperationsService(settings, connection, backup_store, lambda: datetime.now(UTC))
         dashboard = DashboardService(
             activities=SQLiteActivityStore(connection),
             sleep=SQLiteSleepStore(connection),
@@ -36,13 +46,18 @@ def build_production_services(settings: Settings) -> AppServices:
             clock=lambda: datetime.now(UTC),
         )
         inspection = SQLiteInspectionService(runs, settings.database_path, settings.backup_dir)
-        return AppServices(dashboard, inspection, close=connection.close)
+        return AppServices(dashboard, inspection, operations, close=connection.close)
     except Exception:
         connection.close()
         raise
 
 
-def create_app(dashboard_service=None, inspection_service=None, settings: Settings | None = None) -> FastAPI:
+def create_app(
+    dashboard_service=None,
+    inspection_service=None,
+    operations_service=None,
+    settings: Settings | None = None,
+) -> FastAPI:
     if (dashboard_service is None) != (inspection_service is None):
         raise ValueError("dashboard and inspection services must be injected together")
     if dashboard_service is None:
@@ -50,7 +65,7 @@ def create_app(dashboard_service=None, inspection_service=None, settings: Settin
     elif inspection_service is None:
         raise ValueError("dashboard and inspection services must be injected together")
     else:
-        injected = AppServices(dashboard_service, inspection_service)
+        injected = AppServices(dashboard_service, inspection_service, operations_service)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:

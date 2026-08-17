@@ -2,16 +2,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from strava_dashboard.api.dependencies import get_inspection_service
+from strava_dashboard.api.dependencies import OperationsQuery, get_inspection_service, get_operations_service
 from strava_dashboard.application.dashboard import (
     CoachHealth,
     GarminHealth,
     HealthReport,
     InspectionService,
-    StorageHealth,
     SyncRunDetail,
     SyncRunList,
 )
+from strava_dashboard.application.operations import BackupOperation, OperationsHealth
 
 router = APIRouter(prefix="/api/dev", tags=["inspection"])
 
@@ -42,9 +42,14 @@ def sync_run(run_id: str, service: Annotated[InspectionService, Depends(get_insp
     return result
 
 
-@router.get("/storage/health", response_model=StorageHealth)
-def storage_health(service: Annotated[InspectionService, Depends(get_inspection_service)]) -> StorageHealth:
-    return service.storage_health()
+@router.get("/storage/health", response_model=OperationsHealth)
+def storage_health(service: Annotated[OperationsQuery, Depends(get_operations_service)]) -> OperationsHealth:
+    return service.health()
+
+
+@router.post("/storage/backup", response_model=BackupOperation)
+def create_backup(service: Annotated[OperationsQuery, Depends(get_operations_service)]) -> BackupOperation:
+    return service.backup()
 
 
 @router.get("/coach/health", response_model=CoachHealth)

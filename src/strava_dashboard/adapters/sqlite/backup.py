@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
+from strava_dashboard.ports.backups import is_generated_backup_id
 from strava_dashboard.ports.storage import BackupStore, StorageError
 
 BACKUP_SUFFIX = ".sqlite3.gz"
@@ -89,11 +90,21 @@ class SQLiteBackupStore(BackupStore):
             shutil.copyfileobj(source, compressed)
 
     def _apply_retention(self) -> None:
-        backups = sorted(self._backup_dir.glob(f"*{BACKUP_SUFFIX}"), key=self._mtime, reverse=True)
+        backups = sorted(self._generated_backups(), key=self._mtime, reverse=True)
         cutoff = self._now() - timedelta(days=self._retention_days)
         for index, path in enumerate(backups):
             if index >= self._retention_count or self._mtime_datetime(path) < cutoff:
                 path.unlink()
+
+    def _generated_backups(self) -> tuple[Path, ...]:
+        try:
+            return tuple(
+                path
+                for path in self._backup_dir.iterdir()
+                if is_generated_backup_id(path.name) and not path.is_symlink() and path.is_file()
+            )
+        except OSError as error:
+            raise StorageError("SQLite backup retention failed") from error
 
     def _backup_id(self) -> str:
         timestamp = self._now().strftime("%Y%m%dT%H%M%SZ")
@@ -105,8 +116,10 @@ class SQLiteBackupStore(BackupStore):
         return self._backup_dir / name
 
     def _resolve(self, backup_id: str) -> Path:
+        if not is_generated_backup_id(backup_id):
+            raise StorageError("invalid backup identifier")
         path = self._backup_dir / backup_id
-        if path.name != backup_id or path.suffixes != [".sqlite3", ".gz"]:
+        if path.is_symlink() or not path.is_file():
             raise StorageError("invalid backup identifier")
         return path
 

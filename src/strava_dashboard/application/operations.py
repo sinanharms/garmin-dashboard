@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from strava_dashboard.config import Settings
+from strava_dashboard.ports.backups import is_generated_backup_id
 from strava_dashboard.ports.storage import BackupStore, StorageError
 
 HealthStatus = Literal["ok", "degraded", "unavailable"]
@@ -80,10 +81,12 @@ class OperationsService:
 
     def health(self) -> OperationsHealth:
         database = self._database_health()
-        backups, latest = self._backup_files()
+        backups, latest, discovery_failed = self._backup_files()
         backup = self._backup_health(backups)
+        if discovery_failed and self._last_backup_failure is None:
+            backup = BackupHealth(status="unavailable", detail="backup_unavailable")
         disk = self._disk_health()
-        freshness = self._freshness_health(latest)
+        freshness = self._freshness_health(latest, discovery_failed)
         status = _overall_status((database.status, backup.status, disk.status, freshness.status))
         return OperationsHealth(status=status, database=database, backup=backup, disk=disk, freshness=freshness)
 
@@ -95,13 +98,24 @@ class OperationsService:
         except OSError, sqlite3.Error:
             return DatabaseHealth(status="unavailable", detail="database_unavailable")
 
-    def _backup_files(self) -> tuple[tuple[Path, ...], Path | None]:
+    def _backup_files(self) -> tuple[tuple[Path, ...], Path | None, bool]:
+        discovered: list[tuple[Path, float]] = []
         try:
-            files = tuple(path for path in self._settings.backup_dir.glob("*.sqlite3.gz") if path.is_file())
+            paths = tuple(self._settings.backup_dir.iterdir())
+        except FileNotFoundError:
+            return (), None, False
         except OSError:
-            return (), None
-        latest = max(files, key=lambda path: path.stat().st_mtime, default=None)
-        return files, latest
+            return (), None, True
+        for path in paths:
+            if not is_generated_backup_id(path.name) or path.is_symlink():
+                continue
+            try:
+                if path.is_file():
+                    discovered.append((path, path.stat().st_mtime))
+            except OSError:
+                return tuple(item[0] for item in discovered), None, True
+        latest = max(discovered, key=lambda item: item[1], default=None)
+        return tuple(item[0] for item in discovered), latest[0] if latest else None, False
 
     def _backup_health(self, files: tuple[Path, ...]) -> BackupHealth:
         if self._last_backup_failure is not None:
@@ -121,9 +135,10 @@ class OperationsService:
             return DiskHealth(status="unavailable", detail="disk_unavailable")
         return DiskHealth(status="ok" if available > 0 else "degraded", available_bytes=available)
 
-    def _freshness_health(self, latest: Path | None) -> FreshnessHealth:
+    def _freshness_health(self, latest: Path | None, discovery_failed: bool) -> FreshnessHealth:
         if latest is None:
-            return FreshnessHealth(status="unavailable", detail="backup_missing")
+            detail = "backup_unavailable" if discovery_failed else "backup_missing"
+            return FreshnessHealth(status="unavailable", detail=detail)
         try:
             latest_at = datetime.fromtimestamp(latest.stat().st_mtime, tz=UTC)
         except OSError:

@@ -23,3 +23,13 @@
 - `docker compose run --rm app uv run pytest -q`: not runnable; Docker daemon unavailable
 
 All Task 9 source and test files are below the repository's 300-line limit. No credentials, token contents, raw errors, or filesystem paths are included in operation reports.
+
+## Review fixes
+
+- Wired `OperationsService` and `SQLiteBackupStore` into production composition.
+- Added the explicit no-input `POST /api/dev/storage/backup` operation and exposed structured storage-health freshness/failure data.
+- Restricted restore, delete, and retention to generated backup IDs and rejected traversal/symlink targets.
+- Made backup health discovery tolerate disappearing/inaccessible files without leaking an exception through the API.
+- Added production-composition, endpoint, target-validation, and stat-race regression tests.
+
+Final verification: 140 tests passed; Ruff, ty, shell syntax, Compose config, and diff checks passed. Docker runtime tests remained unavailable because the daemon was not running.

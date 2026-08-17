@@ -1,6 +1,8 @@
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from strava_dashboard.api.app import create_app
 from strava_dashboard.application.dashboard import (
@@ -13,6 +15,15 @@ from strava_dashboard.application.dashboard import (
     SyncRunDetail,
     SyncRunList,
 )
+from strava_dashboard.application.operations import (
+    BackupHealth,
+    BackupOperation,
+    DatabaseHealth,
+    DiskHealth,
+    FreshnessHealth,
+    OperationsHealth,
+)
+from strava_dashboard.config import Settings
 from strava_dashboard.domain.models import (
     Activity,
     HealthSummary,
@@ -103,6 +114,20 @@ class FakeInspectionService(InspectionService):
         return CoachHealth(status="unavailable", last_call_status=None, schema_validation_failures=0)
 
 
+class FakeOperationsService:
+    def health(self) -> OperationsHealth:
+        return OperationsHealth(
+            status="degraded",
+            database=DatabaseHealth(status="ok", size_bytes=12),
+            backup=BackupHealth(status="degraded", detail="backup_missing", size_bytes=0),
+            disk=DiskHealth(status="ok", available_bytes=100),
+            freshness=FreshnessHealth(status="unavailable", detail="backup_missing"),
+        )
+
+    def backup(self) -> BackupOperation:
+        return BackupOperation(status="succeeded", backup_id="dashboard-20260817T080000Z-12345678.sqlite3.gz")
+
+
 def sync_detail() -> SyncRunDetail:
     run = SyncRun(
         run_id="run-1",
@@ -114,7 +139,7 @@ def sync_detail() -> SyncRunDetail:
 
 
 def client() -> TestClient:
-    return TestClient(create_app(FakeDashboardService(), FakeInspectionService()))
+    return TestClient(create_app(FakeDashboardService(), FakeInspectionService(), FakeOperationsService()))
 
 
 def test_dashboard_contains_training_health_goal_and_recent_activity() -> None:
@@ -169,6 +194,42 @@ def test_six_read_only_inspection_endpoints_are_available_and_redacted() -> None
     assert api.post("/api/dashboard").status_code == 405
     assert api.post("/api/dev/health").status_code == 405
 
+    storage = api.get("/api/dev/storage/health").json()
+    assert storage["database"]["size_bytes"] == 12
+    assert storage["backup"]["detail"] == "backup_missing"
+    assert storage["freshness"]["detail"] == "backup_missing"
+
+
+def test_safe_backup_endpoint_has_no_input_and_returns_operation_status() -> None:
+    response = client().post("/api/dev/storage/backup")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "succeeded"
+    assert "requestBody" not in client().get("/openapi.json").json()["paths"]["/api/dev/storage/backup"]["post"]
+
+
+def test_production_composition_wires_operations_service(tmp_path: Path) -> None:
+    settings = Settings.model_construct(
+        garmin_email="athlete@example.test",
+        garmin_password=SecretStr("not-a-real-password"),
+        garmin_token_dir=tmp_path / "tokens",
+        database_path=tmp_path / "dashboard.sqlite3",
+        backup_dir=tmp_path / "backups",
+        garmin_mcp_command="garmin-mcp",
+        mcp_timeout_seconds=30,
+        backup_retention_count=2,
+        backup_retention_days=30,
+    )
+
+    with TestClient(create_app(settings=settings)) as api:
+        health = api.get("/api/dev/storage/health")
+        backup = api.post("/api/dev/storage/backup")
+
+    assert health.status_code == 200
+    assert health.json()["database"]["status"] == "ok"
+    assert backup.status_code == 200
+    assert backup.json()["status"] == "succeeded"
+
 
 def test_arbitrary_sql_and_mcp_requests_are_not_exposed() -> None:
     api = client()
@@ -185,7 +246,10 @@ def test_missing_sync_run_is_a_safe_not_found() -> None:
 
 
 def test_unexpected_route_errors_are_redacted() -> None:
-    api = TestClient(create_app(FailingDashboardService(), FakeInspectionService()), raise_server_exceptions=False)
+    api = TestClient(
+        create_app(FailingDashboardService(), FakeInspectionService(), FakeOperationsService()),
+        raise_server_exceptions=False,
+    )
 
     response = api.get("/api/dashboard")
 

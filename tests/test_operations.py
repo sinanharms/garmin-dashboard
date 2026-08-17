@@ -71,19 +71,63 @@ def test_backup_retention_deletes_only_expired_or_excess_backups(tmp_path: Path)
     database, store = create_store(tmp_path)
     backup_dir = tmp_path / "backups"
     backup_dir.mkdir()
-    old = backup_dir / "old.sqlite3.gz"
-    extra = backup_dir / "extra.sqlite3.gz"
+    old = backup_dir / "dashboard-20260801T120000Z-11111111.sqlite3.gz"
+    extra = backup_dir / "dashboard-20260815T120000Z-22222222.sqlite3.gz"
+    unrelated = backup_dir / "old.sqlite3.gz"
     old.write_bytes(b"old")
     extra.write_bytes(b"extra")
+    unrelated.write_bytes(b"keep")
     os.utime(old, (NOW.timestamp() - 31 * 86400, NOW.timestamp() - 31 * 86400))
     os.utime(extra, (NOW.timestamp() - 2 * 86400, NOW.timestamp() - 2 * 86400))
 
     store.create()
     remaining = {path.name for path in backup_dir.glob("*.sqlite3.gz")}
 
-    assert "old.sqlite3.gz" not in remaining
-    assert "extra.sqlite3.gz" in remaining
-    assert len(remaining) == 2
+    assert old.name not in remaining
+    assert extra.name in remaining
+    assert unrelated.name in remaining
+    assert len(remaining) == 3
+    database.close()
+
+
+def test_backup_rejects_traversal_and_symlink_targets(tmp_path: Path) -> None:
+    database, store = create_store(tmp_path)
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    valid_id = "dashboard-20260817T120000Z-12345678.sqlite3.gz"
+    target = tmp_path / "outside.sqlite3.gz"
+    target.write_bytes(b"not a backup")
+    (backup_dir / valid_id).symlink_to(target)
+
+    for backup_id in ("../outside.sqlite3.gz", valid_id):
+        with pytest.raises(StorageError, match="invalid backup identifier"):
+            store.restore(backup_id)
+        with pytest.raises(StorageError, match="invalid backup identifier"):
+            store.delete(backup_id)
+
+    store.create()
+    assert (backup_dir / valid_id).is_symlink()
+    database.close()
+
+
+def test_health_handles_backup_stat_race_without_raising(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    database, store = create_store(tmp_path)
+    backup_id = store.create()
+    service = OperationsService(settings(tmp_path), database, store, clock=lambda: NOW)
+    original_stat = Path.stat
+
+    def race(path: Path, *args, **kwargs):
+        if path.name == backup_id:
+            raise OSError("backup disappeared")
+        return original_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", race)
+
+    report = service.health()
+
+    assert report.status == "unavailable"
+    assert report.backup.status == "unavailable"
+    assert report.freshness.status == "unavailable"
     database.close()
 
 
