@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getTrends } from "../../api/client";
 import type { DashboardView } from "../../api/types";
 import { DashboardPage } from "./DashboardPage";
@@ -13,6 +13,8 @@ vi.mock("../../api/client", async (importOriginal) => ({
 }));
 
 const mockedGetTrends = vi.mocked(getTrends);
+
+afterEach(() => { vi.resetAllMocks(); });
 
 const view: DashboardView = {
   generated_at: "2026-08-17T08:00:00Z",
@@ -73,5 +75,48 @@ describe("DashboardPage", () => {
 
     await waitFor(() => expect(screen.getByText("Trend history unavailable. Collapse and expand to retry.")).toBeVisible());
     expect(screen.getByText("60")).toBeVisible();
+  });
+
+  it("does not render a previous period while a new period loads", async () => {
+    const user = userEvent.setup();
+    const periodView = { ...view, training: { ...view.training, end: "2026-08-18" } };
+    useDashboard.mockReturnValue({ status: "success", data: periodView, retry: vi.fn() });
+    mockedGetTrends
+      .mockResolvedValueOnce({ start: periodView.training.start, end: periodView.training.end, bucket: "week", training: [periodView.training], health: [] })
+      .mockImplementationOnce(() => new Promise(() => undefined));
+    render(<DashboardPage />);
+
+    await user.click(screen.getByRole("button", { name: /training load/i }));
+    await waitFor(() => expect(screen.getByRole("img", { name: "Training load trend" })).toBeVisible());
+    await user.selectOptions(screen.getByLabelText("Trend period"), "month");
+
+    expect(screen.queryByRole("img", { name: "Training load trend" })).not.toBeInTheDocument();
+    expect(screen.getByText("Loading trend history…")).toBeVisible();
+  });
+
+  it("plots only the selected recovery metric history", async () => {
+    const user = userEvent.setup();
+    const recoveryView: DashboardView = {
+      ...view,
+      training: { ...view.training, start: "2026-07-10", end: "2026-07-17" },
+      health: { ...view.health, start: "2026-07-10", end: "2026-07-17", available: true, recovery_metrics: [["body_battery", 70, "percent"]] },
+      health_status: "available",
+    };
+    useDashboard.mockReturnValue({ status: "success", data: recoveryView, retry: vi.fn() });
+    mockedGetTrends.mockResolvedValue({
+      start: recoveryView.training.start,
+      end: recoveryView.training.end,
+      bucket: "week",
+      training: [],
+      health: [
+        { ...recoveryView.health, recovery_metrics: [["hrv", 80, "percent"], ["body_battery", 60, "percent"]] },
+        { ...recoveryView.health, recovery_metrics: [["hrv", 81, "percent"], ["body_battery", 70, "percent"]] },
+      ],
+    });
+    render(<DashboardPage />);
+
+    await user.click(screen.getByRole("button", { name: /recovery/i }));
+
+    await waitFor(() => expect(screen.getByText("Recovery: latest value 70")).toBeVisible());
   });
 });
