@@ -6,7 +6,7 @@ As the dashboard operator, I want a responsive React dashboard that shows curren
 
 ## Status
 
-Approved future design. No `frontend/` application is currently present, and the current static dashboard remains the shipped browser UI.
+Implemented. FastAPI serves the production Vite build, and the React dashboard progressively loads current summaries and historical detail from same-origin APIs.
 
 ## Context
 
@@ -26,8 +26,8 @@ Approved future design. No `frontend/` application is currently present, and the
 5. Expanded cards lazily request and cache `/api/dashboard/trends` details while preserving summary values.
 6. Loading, missing, stale, and error states remain explicit; missing values are not converted to zero.
 7. Color is not the only status signal, visuals have text alternatives, and reduced-motion preferences are respected.
-8. Frontend tests, type checks, production build, API contract checks, and responsive/accessibility checks pass before removing the provisional static UI.
+8. Frontend tests, type checks, production build, API contract checks, and responsive/accessibility browser smoke pass for the shipped React UI.
 
 ## Testing Notes
 
-The approved design requires frontend component/API tests, type checking, Vite build verification, browser smoke coverage, responsive checks, and existing Compose/Python checks. This story is not an implementation plan; use the archived plan only as historical task context.
+Component/API tests cover summary, expansion, retry, nullable trends, and request behavior. The production Playwright smoke loads the built JS through FastAPI and checks expansion at desktop, tablet, and mobile widths. Type checking, Vite build verification, Compose validation, and Python checks remain required.

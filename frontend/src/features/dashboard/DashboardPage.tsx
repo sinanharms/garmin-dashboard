@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MetricCard } from "../../components/MetricCard/MetricCard";
 import { TrendChart } from "../../components/TrendChart/TrendChart";
 import type { TrendBucket, TrendSnapshot } from "../../api/types";
-import { formatInclusivePeriod } from "../../components/formatters";
+import { formatDuration, formatInclusivePeriod } from "../../components/formatters";
 import { GoalCard } from "./GoalCard";
 import { PlanCard } from "./PlanCard";
 import { RecentActivities } from "./RecentActivities";
@@ -17,6 +17,11 @@ const bucketLabels: Record<TrendBucket, string> = { week: "Weekly", month: "Mont
 
 function matchesQuery(snapshot: TrendSnapshot, query: { start: string; end: string; bucket: TrendBucket } | null): boolean {
   return query !== null && snapshot.start === query.start && snapshot.end === query.end && snapshot.bucket === query.bucket;
+}
+
+function formatTrendValue(metricId: MetricId, value: number, unit: string): string {
+  if (metricId === "activity-volume" || metricId === "sleep") return formatDuration(value);
+  return unit === "" ? String(value) : `${value} ${unit}`;
 }
 
 export function DashboardPage() {
@@ -44,7 +49,7 @@ export function DashboardPage() {
       <p className={styles.periodLabel}>{query && formatInclusivePeriod(query.start, query.end)} · {bucketLabels[bucket]}</p>
       {trend.status === "loading" && <p aria-live="polite">Loading trend history…</p>}
       {trend.status === "error" && <div className={styles.detailError}><p role="alert">Trend history unavailable.</p><button type="button" onClick={trend.retry}>Retry trend history</button></div>}
-      {trend.status === "success" && matchesQuery(trend.data, query) && <TrendChart points={buildTrendPoints(expandedId, trend.data, expandedMetric?.trendMetricName)} valueLabel={expandedMetric?.title ?? "Metric"} emptyLabel="No trend history for this period." />}
+      {trend.status === "success" && matchesQuery(trend.data, query) && <TrendChart points={buildTrendPoints(expandedId, trend.data, expandedMetric?.trendMetricName)} valueLabel={expandedMetric?.title ?? "Metric"} valueFormatter={(value) => formatTrendValue(expandedId, value, expandedMetric?.unit ?? "")} emptyLabel="No trend history for this period." />}
     </div>
   );
   return <main className={styles.page}>

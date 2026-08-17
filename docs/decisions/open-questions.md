@@ -25,7 +25,3 @@ Questions below come from differences between approved design documents and curr
 ## Dependency reproducibility
 
 - **OQ-8: Should Docker pin Garmin MCP to the discovered schema commit?** The adapter records commit `3610be6feed93088d85b0f35aba9d7d07c2505a7`, while `Dockerfile` installs from the repository Git URL without an explicit commit selector. Decide the release reproducibility policy.
-
-## Frontend delivery
-
-- **OQ-9: When does React replace the static UI?** The React design is approved but no `frontend/` directory exists. Define the implementation milestone and verification gate before removing `api/templates/index.html` and current static assets.

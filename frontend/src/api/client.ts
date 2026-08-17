@@ -1,4 +1,5 @@
 import type { DashboardView, TrendQuery, TrendSnapshot } from "./types";
+import { isDashboardView, isTrendSnapshot } from "./guards";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -9,7 +10,13 @@ export class ApiError extends Error {
   }
 }
 
-async function requestJson<T>(url: string, failureMessage: string, signal?: AbortSignal): Promise<T> {
+async function requestJson<T>(
+  url: string,
+  failureMessage: string,
+  invalidResponseMessage: string,
+  validator: (value: unknown) => value is T,
+  signal?: AbortSignal,
+): Promise<T> {
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     signal,
@@ -19,12 +26,20 @@ async function requestJson<T>(url: string, failureMessage: string, signal?: Abor
     throw new ApiError(response.status, failureMessage);
   }
 
-  return (await response.json()) as T;
+  const value: unknown = await response.json();
+  if (!validator(value)) throw new ApiError(0, invalidResponseMessage);
+  return value;
 }
 
 export function getDashboard(today?: string, signal?: AbortSignal): Promise<DashboardView> {
   const query = today === undefined ? "" : `?today=${encodeURIComponent(today)}`;
-  return requestJson<DashboardView>(`/api/dashboard${query}`, "Dashboard request failed", signal);
+  return requestJson<DashboardView>(
+    `/api/dashboard${query}`,
+    "Dashboard request failed",
+    "Dashboard response invalid",
+    isDashboardView,
+    signal,
+  );
 }
 
 export function getTrends(query: TrendQuery, signal?: AbortSignal): Promise<TrendSnapshot> {
@@ -35,6 +50,9 @@ export function getTrends(query: TrendQuery, signal?: AbortSignal): Promise<Tren
   });
   return requestJson<TrendSnapshot>(
     `/api/dashboard/trends?${params.toString()}`,
-    "Trends request failed", signal,
+    "Trends request failed",
+    "Trends response invalid",
+    isTrendSnapshot,
+    signal,
   );
 }

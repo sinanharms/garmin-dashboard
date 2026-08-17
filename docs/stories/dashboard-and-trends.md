@@ -6,7 +6,7 @@ As the dashboard operator, I need current training and health summaries plus dat
 
 ## Status
 
-The current backend exposes dashboard and trend responses. The current browser UI is static HTML/JavaScript and renders a compact subset of the response. The richer card-based trend experience is approved React future work.
+The backend exposes dashboard and trend responses. The React browser UI renders current values, supported breakdowns, planning explanations, and lazy historical card detail without changing API ownership.
 
 ## Context
 
@@ -22,10 +22,10 @@ The current backend exposes dashboard and trend responses. The current browser U
 2. Training summaries include activity count, duration, distance, elevation, sport counts, and optional training load.
 3. Health summaries include availability, average sleep duration/score, and recovery metrics without inventing unavailable values.
 4. `GET /api/dashboard/trends` requires `start` and `end`, accepts week/month/year buckets, and rejects equal or inverted dates with `422`.
-5. The static dashboard loads same-origin `/api/dashboard` data and displays explicit unavailable states.
+5. The React dashboard loads same-origin `/api/dashboard` data and displays explicit unavailable states.
 6. API errors return safe generic details and never include internal exception text.
-7. Future frontend work keeps FastAPI response contracts as the source of truth and adds detail progressively without changing backend ownership.
+7. Frontend detail keeps FastAPI response contracts as the source of truth and adds presentation progressively without changing backend ownership.
 
 ## Testing Notes
 
-API tests cover dashboard fields, trend query validation, response redaction, shell/static delivery, and unexpected error handling. Metric tests cover training, health, rolling load, and trend summaries.
+API tests cover dashboard fields, trend query validation, response redaction, shell/static delivery, and unexpected error handling. Frontend tests cover historical query ranges, inclusive display dates, gap preservation, and supported dashboard presentation. Metric tests cover training, health, rolling load, and trend summaries.

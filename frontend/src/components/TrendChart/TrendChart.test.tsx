@@ -37,4 +37,18 @@ describe("TrendChart", () => {
     expect(screen.getByText("Recovery: latest value unavailable · 1 missing period")).toBeVisible();
     expect(screen.queryByText("Recovery: latest value 60")).not.toBeInTheDocument();
   });
+
+  it("uses the metric formatter for accessible trend values", () => {
+    render(
+      <TrendChart
+        points={[{ date: "2026-01-01", value: 3600 }]}
+        valueLabel="Activity volume"
+        emptyLabel="No history"
+        valueFormatter={(value) => `${Math.round(value / 60)} minutes`}
+      />,
+    );
+
+    expect(screen.getByText("Activity volume: latest value 60 minutes · 0 missing periods")).toBeVisible();
+    expect(screen.getByRole("img")).toHaveTextContent("2026-01-01: 60 minutes");
+  });
 });

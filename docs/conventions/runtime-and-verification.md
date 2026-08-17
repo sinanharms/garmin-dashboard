@@ -25,8 +25,21 @@ docker compose run --rm \
 
 Focused config tests use the same mount. Run Ruff through the app image with `docker compose run --rm app uv run ruff check .`.
 
+Build frontend checks and the containerized production browser smoke with:
+
+```bash
+docker build --target frontend-checks .
+docker build --target browser-smoke -t garmin-dashboard-browser-smoke .
+docker compose up -d --build app
+docker run --rm --add-host host.docker.internal:host-gateway \
+  -e BASE_URL=http://host.docker.internal:8000 \
+  garmin-dashboard-browser-smoke
+```
+
+The Playwright smoke must execute the built JS through FastAPI and cover desktop, tablet, and mobile projects. An endpoint-only shell check is not browser coverage.
+
 ## Verification baseline
 
 Before handoff, validate Compose, run focused configuration tests, run the full relevant test suite, run Ruff, and inspect `git diff --check`. Keep source files below 300 lines and preserve unrelated working-tree changes.
 
-Applies to every current story and to the planned [React dashboard](../stories/react-dashboard.md) when frontend implementation begins.
+Applies to every current story, including the implemented [React dashboard](../stories/react-dashboard.md).

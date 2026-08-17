@@ -119,6 +119,12 @@ docker compose run --rm \
   -v "$PWD/tests:/app/tests:ro" \
   app uv run pytest -q
 docker compose run --rm app uv run ruff check .
+docker build --target frontend-checks .
+docker build --target browser-smoke -t garmin-dashboard-browser-smoke .
+docker compose up -d --build app
+docker run --rm --add-host host.docker.internal:host-gateway \
+  -e BASE_URL=http://host.docker.internal:8000 \
+  garmin-dashboard-browser-smoke
 ```
 
 ## Project structure
@@ -131,9 +137,10 @@ src/strava_dashboard/
 ├── adapters/
 │   ├── garmin_mcp/          # MCP stdio session, tool mapping, data adapter
 │   └── sqlite/               # SQLite schema, stores, connection, backups
-├── api/                     # FastAPI app, routes, static dashboard
+├── api/                     # FastAPI app, routes, built frontend assets
 ├── config.py                # Pydantic Settings and environment aliases
 └── worker.py                # One-shot sync entrypoint
+frontend/                    # React UI, component tests, and production browser smoke
 ```
 
 Additional references:

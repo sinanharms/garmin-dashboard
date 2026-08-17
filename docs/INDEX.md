@@ -30,7 +30,7 @@ Feature-level context. One story per file; status distinguishes implemented beha
 - [Dashboard and trends](stories/dashboard-and-trends.md) — Current dashboard summaries and trend API behavior.
 - [Planning and coaching](stories/planning-and-coaching.md) — Goals, plan validation, coach boundary, and current limitations.
 - [Operations and backups](stories/operations-and-backups.md) — Health inspection, backup creation, restore, and retention.
-- [React dashboard](stories/react-dashboard.md) — Approved future frontend redesign; not implemented.
+- [React dashboard](stories/react-dashboard.md) — Implemented responsive frontend, progressive trend detail, and verification boundary.
 
 ## API
 

@@ -22,7 +22,7 @@ scheduler ── stdio ──► garmin-mcp ──► Garmin MCP adapter
                                           ▼
 app ──► DashboardService / OperationsService ──► FastAPI API
   │                                                   │
-  └──────────── static HTML + JavaScript ◄────────────┘
+  └──────────── React production build ◄──────────────┘
 ```
 
 The browser never connects directly to Garmin, MCP, SQLite, credentials, or token state.
@@ -36,7 +36,8 @@ The browser never connects directly to Garmin, MCP, SQLite, credentials, or toke
 | Application | `src/strava_dashboard/application/` | Sync workflow, metric calculation, dashboard queries, planning validation, and operations. |
 | Garmin adapter | `src/strava_dashboard/adapters/garmin_mcp/` | Starts MCP over stdio, calls tools, validates payloads, maps records, and closes sessions. |
 | SQLite adapters | `src/strava_dashboard/adapters/sqlite/` | Schema, connection, normalized stores, sync history, and compressed backups. |
-| HTTP delivery | `src/strava_dashboard/api/` | Production wiring, FastAPI routes, static dashboard, and redacted error responses. |
+| HTTP delivery | `src/strava_dashboard/api/` | Production wiring, FastAPI routes, built React assets, and redacted error responses. |
+| Browser UI | `frontend/` | React presentation, typed same-origin API client, responsive card interaction, and frontend tests. |
 | Worker delivery | `src/strava_dashboard/worker.py` | One-shot sync entrypoint with a 30-day initial lookback. |
 
 Detailed data entities and persistence tables live in [data-model.md](data-model.md). Shared rules live in [runtime](../conventions/runtime-and-verification.md), [security](../conventions/security-and-secrets.md), and [data integrity](../conventions/data-integrity-and-failure.md).
@@ -63,9 +64,9 @@ The adapter skips explicit “no sleep summary” and “no HRV data” response
 
 ## Request flow
 
-The static dashboard at `/` loads `/static/dashboard.js`, which requests `GET /api/dashboard`. The dashboard service reads the selected seven-day window, computes training and health summaries, loads the current goal/plan, and returns up to ten recent activities.
+The React shell at `/` loads its hashed Vite assets from `/static/app/`, then requests `GET /api/dashboard`. The dashboard service reads the selected seven-day window, computes training and health summaries, loads the current goal/plan, and returns up to ten recent activities.
 
-Trend requests use `GET /api/dashboard/trends` with an explicit start date, end date, and week/month/year bucket. The route rejects equal or inverted dates before the application service runs.
+Expanding a metric card lazily requests `GET /api/dashboard/trends` with an explicit start date, exclusive end date, and week/month/year bucket. Weekly, monthly, and yearly controls request 12 weeks, 12 backend 30-day buckets, and five backend 365-day buckets respectively. The route rejects equal or inverted dates before the application service runs.
 
 Inspection routes read sync history, database/storage health, or coach availability. The backup route calls `OperationsService.backup()` and returns a generated backup identifier; it accepts no request body and does not expose arbitrary SQL or MCP calls.
 
@@ -80,7 +81,7 @@ Inspection routes read sync history, database/storage health, or coach availabil
 
 The image installs `garmin-mcp` from its pinned Git revision during build. The MCP server remains a child stdio process; Compose does not expose an HTTP MCP service.
 
-Current frontend consists of `api/templates/index.html`, `api/static/dashboard.js`, and `api/static/dashboard.css`. The React + TypeScript + Vite redesign is approved future work, not a current runtime component. See [the future story](../stories/react-dashboard.md).
+The Docker frontend stage builds `frontend/` and copies `frontend/dist` into `api/static/app` in the application image. FastAPI serves `index.html` at `/` and the hashed assets under `/static/app/`. See the [React dashboard story](../stories/react-dashboard.md).
 
 ## Related stories
 

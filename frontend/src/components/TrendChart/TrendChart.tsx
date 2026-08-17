@@ -6,6 +6,7 @@ type TrendChartProps = {
   points: readonly TrendPoint[];
   valueLabel: string;
   emptyLabel: string;
+  valueFormatter?: (value: number) => string;
 };
 
 const width = 320;
@@ -37,7 +38,7 @@ function getSegments(points: readonly TrendPoint[]): readonly Coordinate[][] {
   return segments;
 }
 
-export function TrendChart({ points, valueLabel, emptyLabel }: TrendChartProps) {
+export function TrendChart({ points, valueLabel, emptyLabel, valueFormatter = String }: TrendChartProps) {
   const available = points.filter((point) => point.value !== null);
   if (available.length === 0) {
     return <p className={styles.empty}>{emptyLabel}</p>;
@@ -47,13 +48,14 @@ export function TrendChart({ points, valueLabel, emptyLabel }: TrendChartProps) 
   const latest = points[points.length - 1]?.value;
   const missing = points.length - available.length;
   const missingLabel = `${missing} missing ${missing === 1 ? "period" : "periods"}`;
-  const summary = `${valueLabel}: latest value ${latest === null ? "unavailable" : latest} · ${missingLabel}`;
+  const formatValue = (value: number | null) => value === null ? "unavailable" : valueFormatter(value);
+  const summary = `${valueLabel}: latest value ${formatValue(latest)} · ${missingLabel}`;
 
   return (
     <div className={styles.chart}>
       <p className={styles.summary}>{summary}</p>
       <svg className={styles.visual} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${valueLabel} trend`}>
-        <desc>{points.map((point) => `${point.date}: ${point.value ?? "unavailable"}`).join("; ")}</desc>
+        <desc>{points.map((point) => `${point.date}: ${formatValue(point.value)}`).join("; ")}</desc>
         {segments.filter((segment) => segment.length > 1).map((segment) => (
           <polyline key={segment[0].index} className={styles.line} data-testid="trend-segment" points={segment.map((point) => point.value).join(" ")} />
         ))}

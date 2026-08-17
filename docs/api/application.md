@@ -14,8 +14,8 @@ The API does not expose Garmin credentials, token state, raw MCP responses, arbi
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/` | Static dashboard shell. |
-| GET | `/static/{path}` | Static dashboard assets. |
+| GET | `/` | React dashboard shell. |
+| GET | `/static/app/{path}` | Hashed React production assets. |
 | GET | `/docs` | FastAPI Swagger UI. |
 | GET | `/redoc` | FastAPI ReDoc UI. |
 | GET | `/openapi.json` | FastAPI-generated OpenAPI document. |
@@ -305,9 +305,9 @@ Return coach-provider availability without exposing prompts or provider credenti
 }
 ```
 
-## Static delivery
+## Frontend delivery
 
-`GET /` serves `api/templates/index.html`. The page loads `/static/dashboard.css` and `/static/dashboard.js`; the JavaScript fetches `/api/dashboard` and renders health, training, goal, plan, and recent-activity summaries.
+`GET /` serves the Vite-generated `index.html` from `api/static/app`. Its hashed JavaScript and CSS load from `/static/app/assets/`; the React application fetches same-origin dashboard and trend APIs. Docker creates these files from `frontend/` during the application build.
 
 FastAPI’s built-in `/docs`, `/redoc`, and `/openapi.json` routes are available for interactive inspection. Keep access loopback-bound through Compose when running locally.
 

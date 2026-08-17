@@ -38,6 +38,7 @@ test("loads production built JS and expands dashboard history responsively", asy
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(supporting).toBeVisible();
   await expect(page.getByLabel("Trend period")).toBeVisible();
+  expect((await page.getByLabel("Trend period").boundingBox())?.height).toBeGreaterThanOrEqual(44);
 
   const response = await trendResponse;
   expect(response.ok()).toBe(true);
@@ -49,4 +50,13 @@ test("loads production built JS and expands dashboard history responsively", asy
 
   const transitionDuration = await card.evaluate((element) => getComputedStyle(element).transitionDuration);
   expect(transitionDuration).toBe("0s");
+});
+
+test("keeps the initial dashboard retry touch-sized", async ({ page }) => {
+  await page.route("**/api/dashboard", (route) => route.fulfill({ status: 503, body: "{}" }));
+  await page.goto("/");
+
+  const retry = page.getByRole("button", { name: "Retry" });
+  await expect(retry).toBeVisible();
+  expect((await retry.boundingBox())?.height).toBeGreaterThanOrEqual(44);
 });

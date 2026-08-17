@@ -126,7 +126,7 @@ describe("DashboardPage", () => {
 
     await user.click(screen.getByRole("button", { name: /recovery/i }));
 
-    await waitFor(() => expect(screen.getByText("Recovery: latest value 70 · 0 missing periods")).toBeVisible());
+    await waitFor(() => expect(screen.getByText("Recovery: latest value 70 percent · 0 missing periods")).toBeVisible());
   });
 
   it("renders supported plan and workout explanations", () => {
