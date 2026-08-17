@@ -1,0 +1,11 @@
+.page { margin: 0 auto; max-width: 72rem; padding: 2rem; }
+.header { margin-bottom: 1.5rem; }
+.header h1 { margin: 0.25rem 0; }
+.eyebrow { color: var(--color-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; margin: 0; text-transform: uppercase; }
+.notice, .error { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: 1rem; }
+.metrics { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.details { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); margin-top: 1rem; }
+.details section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: 1rem; }
+.details h2 { margin-top: 0; }
+.details ul { margin-bottom: 0; padding-left: 1.25rem; }
+@media (max-width: 700px) { .page { padding: 1rem; } }
