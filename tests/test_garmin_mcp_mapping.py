@@ -5,8 +5,8 @@ from typing import Any, cast
 
 import pytest
 
-from strava_dashboard.adapters.garmin_mcp import mapping
-from strava_dashboard.adapters.garmin_mcp.mapping import GarminDataError
+from garmin_dashboard.adapters.garmin_mcp import mapping
+from garmin_dashboard.adapters.garmin_mcp.mapping import GarminDataError
 
 SCHEMA_SNAPSHOT = Path(__file__).parent / "fixtures" / "garmin_mcp_list_tools_schema.json"
 

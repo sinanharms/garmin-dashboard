@@ -5,9 +5,9 @@ from typing import cast
 import pytest
 from test_garmin_mcp_adapter import FakeSession, FakeSessionFactory, load_fixture, sync_window
 
-from strava_dashboard.adapters.garmin_mcp.adapter import GarminMcpAdapter
-from strava_dashboard.adapters.garmin_mcp.mapping import GarminDataError
-from strava_dashboard.adapters.garmin_mcp.session import McpSessionError
+from garmin_dashboard.adapters.garmin_mcp.adapter import GarminMcpAdapter
+from garmin_dashboard.adapters.garmin_mcp.mapping import GarminDataError
+from garmin_dashboard.adapters.garmin_mcp.session import McpSessionError
 
 
 def test_missing_required_activity_field_raises_redacted_data_error_and_closes() -> None:

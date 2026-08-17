@@ -6,10 +6,10 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from strava_dashboard.adapters.sqlite.activity_store import SQLiteActivityStore
-from strava_dashboard.adapters.sqlite.connection import open_connection
-from strava_dashboard.adapters.sqlite.recovery_store import SQLiteRecoveryStore
-from strava_dashboard.adapters.sqlite.sleep_store import SQLiteSleepStore
+from garmin_dashboard.adapters.sqlite.activity_store import SQLiteActivityStore
+from garmin_dashboard.adapters.sqlite.connection import open_connection
+from garmin_dashboard.adapters.sqlite.recovery_store import SQLiteRecoveryStore
+from garmin_dashboard.adapters.sqlite.sleep_store import SQLiteSleepStore
 
 
 @pytest.fixture

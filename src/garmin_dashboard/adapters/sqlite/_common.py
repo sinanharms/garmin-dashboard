@@ -1,0 +1,76 @@
+import sqlite3
+from collections.abc import Sequence
+from datetime import UTC, date, datetime
+
+from garmin_dashboard.domain.models import (
+    ActivityCursor,
+    DataFamily,
+    RecoveryCursor,
+    SleepCursor,
+)
+from garmin_dashboard.ports.storage import StorageError
+
+from .connection import SQLiteConnection
+
+
+class SQLiteStore:
+    def __init__(self, connection: SQLiteConnection) -> None:
+        self._connection = connection
+
+    @property
+    def connection(self) -> SQLiteConnection:
+        return self._connection
+
+
+def timestamp_text(value: datetime) -> str:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("datetime must be timezone-aware")
+    return value.astimezone(UTC).isoformat()
+
+
+def parse_timestamp(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("stored timestamp must be timezone-aware")
+    return parsed
+
+
+def cursor_for[CursorType: (ActivityCursor, SleepCursor, RecoveryCursor)](
+    connection: SQLiteConnection, family: DataFamily, cursor_type: type[CursorType]
+) -> CursorType | None:
+    try:
+        with connection.locked():
+            row = connection.execute("SELECT watermark FROM sync_cursors WHERE data_family = ?", (family,)).fetchone()
+    except sqlite3.Error as error:
+        raise StorageError("SQLite cursor read failed") from error
+    if row is None:
+        return None
+    return cursor_type(watermark=parse_timestamp(row["watermark"]))
+
+
+def save_cursor[CursorType: (ActivityCursor, SleepCursor, RecoveryCursor)](
+    connection: SQLiteConnection, family: DataFamily, cursor: CursorType
+) -> None:
+    with connection.locked():
+        connection.execute(
+            """
+            INSERT INTO sync_cursors(data_family, watermark) VALUES (?, ?)
+            ON CONFLICT(data_family) DO UPDATE SET watermark = excluded.watermark
+            WHERE excluded.watermark > sync_cursors.watermark
+            """,
+            (family, timestamp_text(cursor.watermark)),
+        )
+
+
+def date_text(value: date) -> str:
+    return value.isoformat()
+
+
+def require_limit(limit: int) -> int:
+    if limit < 1:
+        raise ValueError("limit must be positive")
+    return limit
+
+
+def rows_to_tuple(rows: Sequence[sqlite3.Row]) -> tuple[sqlite3.Row, ...]:
+    return tuple(rows)

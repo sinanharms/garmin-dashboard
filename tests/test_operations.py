@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from strava_dashboard.adapters.sqlite import backup as backup_module
-from strava_dashboard.adapters.sqlite.backup import SQLiteBackupStore
-from strava_dashboard.adapters.sqlite.connection import SQLiteConnection, open_connection
-from strava_dashboard.application.operations import OperationsService
-from strava_dashboard.config import Settings
-from strava_dashboard.ports.storage import StorageError
+from garmin_dashboard.adapters.sqlite import backup as backup_module
+from garmin_dashboard.adapters.sqlite.backup import SQLiteBackupStore
+from garmin_dashboard.adapters.sqlite.connection import SQLiteConnection, open_connection
+from garmin_dashboard.application.operations import OperationsService
+from garmin_dashboard.config import Settings
+from garmin_dashboard.ports.storage import StorageError
 
 NOW = datetime(2026, 8, 17, 12, tzinfo=UTC)
 

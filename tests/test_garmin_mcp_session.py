@@ -10,8 +10,8 @@ from typing import Any, cast
 import pytest
 from mcp.types import CallToolResult, TextContent
 
-from strava_dashboard.adapters.garmin_mcp import session as session_module
-from strava_dashboard.adapters.garmin_mcp.session import McpSessionError, StdioMcpSessionFactory
+from garmin_dashboard.adapters.garmin_mcp import session as session_module
+from garmin_dashboard.adapters.garmin_mcp.session import McpSessionError, StdioMcpSessionFactory
 
 
 class FakeSdkSession:

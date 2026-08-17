@@ -1,4 +1,4 @@
 def test_imports() -> None:
-    import strava_dashboard
+    import garmin_dashboard
 
-    assert strava_dashboard is not None
+    assert garmin_dashboard is not None

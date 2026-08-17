@@ -38,7 +38,7 @@
 
 **Files:**
 - Create: `docs/architecture.md`
-- Reference: `src/strava_dashboard/domain`, `ports`, `application`, `adapters`, `api`, `worker.py`, `compose.yaml`
+- Reference: `../../../src/garmin_dashboard/domain`, `ports`, `application`, `adapters`, `api`, `worker.py`, `compose.yaml`
 
 **Interfaces:**
 - Consumes: Current module boundaries and runtime wiring.
@@ -54,7 +54,7 @@
 
 **Files:**
 - Create: `docs/api.md`
-- Reference: `src/strava_dashboard/api/routes_dashboard.py`, `src/strava_dashboard/api/routes_dev.py`, response models, `tests/test_api.py`
+- Reference: `../../../src/garmin_dashboard/api/routes_dashboard.py`, `../../../src/garmin_dashboard/api/routes_dev.py`, response models, `tests/test_api.py`
 
 **Interfaces:**
 - Consumes: FastAPI route paths, query parameters, response models, and tested HTTP errors.

@@ -3,14 +3,14 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
-from strava_dashboard.adapters.sqlite.activity_store import SQLiteActivityStore
-from strava_dashboard.adapters.sqlite.connection import open_connection
-from strava_dashboard.adapters.sqlite.planning_store import SQLiteGoalStore, SQLitePlanStore
-from strava_dashboard.adapters.sqlite.schema import SCHEMA_VERSION, apply_schema
-from strava_dashboard.adapters.sqlite.sync_store import SQLiteSyncRunStore
-from strava_dashboard.domain.models import SyncRun, SyncStageResult
-from strava_dashboard.domain.plan_models import Goal, PlanProposal, ValidatedPlan, Workout
-from strava_dashboard.ports.storage import StorageError
+from garmin_dashboard.adapters.sqlite.activity_store import SQLiteActivityStore
+from garmin_dashboard.adapters.sqlite.connection import open_connection
+from garmin_dashboard.adapters.sqlite.planning_store import SQLiteGoalStore, SQLitePlanStore
+from garmin_dashboard.adapters.sqlite.schema import SCHEMA_VERSION, apply_schema
+from garmin_dashboard.adapters.sqlite.sync_store import SQLiteSyncRunStore
+from garmin_dashboard.domain.models import SyncRun, SyncStageResult
+from garmin_dashboard.domain.plan_models import Goal, PlanProposal, ValidatedPlan, Workout
+from garmin_dashboard.ports.storage import StorageError
 
 
 def test_connection_applies_required_sqlite_pragmas(tmp_path) -> None:

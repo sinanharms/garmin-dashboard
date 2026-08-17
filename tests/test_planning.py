@@ -5,9 +5,9 @@ from typing import Any, cast
 import pytest
 from pydantic import ValidationError
 
-from strava_dashboard.application.planning import PlanningService, PlanValidationError, PlanValidator
-from strava_dashboard.domain.models import HealthSummary, TrainingSummary
-from strava_dashboard.domain.plan_models import (
+from garmin_dashboard.application.planning import PlanningService, PlanValidationError, PlanValidator
+from garmin_dashboard.domain.models import HealthSummary, TrainingSummary
+from garmin_dashboard.domain.plan_models import (
     CoachContext,
     Goal,
     PlanConstraints,
@@ -15,7 +15,7 @@ from strava_dashboard.domain.plan_models import (
     ValidatedPlan,
     Workout,
 )
-from strava_dashboard.ports.coach import CoachProviderUnavailable, UnavailableCoachProvider
+from garmin_dashboard.ports.coach import CoachProviderUnavailable, UnavailableCoachProvider
 
 NOW = datetime(2026, 8, 16, 8, tzinfo=UTC)
 

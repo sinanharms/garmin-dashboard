@@ -1,6 +1,6 @@
 from datetime import UTC, date, datetime
 
-from strava_dashboard.domain.models import (
+from garmin_dashboard.domain.models import (
     Activity,
     DashboardSnapshot,
     HealthSummary,
@@ -11,7 +11,7 @@ from strava_dashboard.domain.models import (
     TrendBucket,
     TrendSnapshot,
 )
-from strava_dashboard.domain.plan_models import PlanConstraints, PlanProposal, Workout
+from garmin_dashboard.domain.plan_models import PlanConstraints, PlanProposal, Workout
 
 
 def activity(utc_now: datetime) -> Activity:

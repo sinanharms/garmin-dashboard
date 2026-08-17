@@ -6,8 +6,8 @@ from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import cast
 
-from strava_dashboard.adapters.garmin_mcp.adapter import GarminMcpAdapter
-from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession, SyncWindow
+from garmin_dashboard.adapters.garmin_mcp.adapter import GarminMcpAdapter
+from garmin_dashboard.domain.models import Activity, RecoverySignal, SleepSession, SyncWindow
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 BERLIN_OFFSET = timezone(timedelta(hours=2))

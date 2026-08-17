@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from strava_dashboard.domain.models import (
+from garmin_dashboard.domain.models import (
     Activity,
     ActivityCursor,
     DomainModel,
@@ -16,7 +16,7 @@ from strava_dashboard.domain.models import (
     SyncStageResult,
     SyncWindow,
 )
-from strava_dashboard.domain.plan_models import Goal, PlanProposal, Workout
+from garmin_dashboard.domain.plan_models import Goal, PlanProposal, Workout
 
 
 def activity(utc_now: datetime, **changes: object) -> Activity:

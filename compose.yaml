@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    command: uv run uvicorn strava_dashboard.api.app:app --host 0.0.0.0 --port 8000
+    command: uv run uvicorn garmin_dashboard.api.app:app --host 0.0.0.0 --port 8000
     env_file: .env
     environment:
       GARMIN_TOKEN_DIR: /root/.garminconnect
@@ -19,7 +19,7 @@ services:
 
   scheduler:
     build: .
-    command: uv run python -m strava_dashboard.worker
+    command: uv run python -m garmin_dashboard.worker
     env_file: .env
     environment:
       GARMIN_TOKEN_DIR: /root/.garminconnect

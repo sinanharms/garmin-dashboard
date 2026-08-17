@@ -31,14 +31,14 @@ The browser never connects directly to Garmin, MCP, SQLite, credentials, or toke
 
 | Boundary | Location | Responsibility |
 | --- | --- | --- |
-| Domain | `src/strava_dashboard/domain/` | Immutable Pydantic models for activities, sleep, recovery, sync, summaries, goals, and plans. |
-| Ports | `src/strava_dashboard/ports/` | Stable protocols and source/storage/coach errors used by application services. |
-| Application | `src/strava_dashboard/application/` | Sync workflow, metric calculation, dashboard queries, planning validation, and operations. |
-| Garmin adapter | `src/strava_dashboard/adapters/garmin_mcp/` | Starts MCP over stdio, calls tools, validates payloads, maps records, and closes sessions. |
-| SQLite adapters | `src/strava_dashboard/adapters/sqlite/` | Schema, connection, normalized stores, sync history, and compressed backups. |
-| HTTP delivery | `src/strava_dashboard/api/` | Production wiring, FastAPI routes, built React assets, and redacted error responses. |
+| Domain | `../../src/garmin_dashboard/domain/` | Immutable Pydantic models for activities, sleep, recovery, sync, summaries, goals, and plans. |
+| Ports | `../../src/garmin_dashboard/ports/` | Stable protocols and source/storage/coach errors used by application services. |
+| Application | `../../src/garmin_dashboard/application/` | Sync workflow, metric calculation, dashboard queries, planning validation, and operations. |
+| Garmin adapter | `../../src/garmin_dashboard/adapters/garmin_mcp/` | Starts MCP over stdio, calls tools, validates payloads, maps records, and closes sessions. |
+| SQLite adapters | `../../src/garmin_dashboard/adapters/sqlite/` | Schema, connection, normalized stores, sync history, and compressed backups. |
+| HTTP delivery | `../../src/garmin_dashboard/api/` | Production wiring, FastAPI routes, built React assets, and redacted error responses. |
 | Browser UI | `frontend/` | React presentation, typed same-origin API client, responsive card interaction, and frontend tests. |
-| Worker delivery | `src/strava_dashboard/worker.py` | One-shot sync entrypoint with a 30-day initial lookback. |
+| Worker delivery | `../../src/garmin_dashboard/worker.py` | One-shot sync entrypoint with a 30-day initial lookback. |
 
 Detailed data entities and persistence tables live in [data-model.md](data-model.md). Shared rules live in [runtime](../conventions/runtime-and-verification.md), [security](../conventions/security-and-secrets.md), and [data integrity](../conventions/data-integrity-and-failure.md).
 

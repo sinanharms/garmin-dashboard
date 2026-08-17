@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def test_application_source_has_no_dataclass_imports_or_decorators() -> None:
-    source_root = Path(__file__).parents[1] / "src/strava_dashboard"
+    source_root = Path(__file__).parents[1] / "src/garmin_dashboard"
     violations: list[str] = []
 
     for path in source_root.rglob("*.py"):

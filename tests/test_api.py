@@ -4,8 +4,8 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from strava_dashboard.api.app import create_app
-from strava_dashboard.application.dashboard import (
+from garmin_dashboard.api.app import create_app
+from garmin_dashboard.application.dashboard import (
     CoachHealth,
     DashboardView,
     GarminHealth,
@@ -15,7 +15,7 @@ from strava_dashboard.application.dashboard import (
     SyncRunDetail,
     SyncRunList,
 )
-from strava_dashboard.application.operations import (
+from garmin_dashboard.application.operations import (
     BackupHealth,
     BackupOperation,
     DatabaseHealth,
@@ -23,8 +23,8 @@ from strava_dashboard.application.operations import (
     FreshnessHealth,
     OperationsHealth,
 )
-from strava_dashboard.config import Settings
-from strava_dashboard.domain.models import (
+from garmin_dashboard.config import Settings
+from garmin_dashboard.domain.models import (
     Activity,
     HealthSummary,
     SyncRun,
@@ -33,7 +33,7 @@ from strava_dashboard.domain.models import (
     TrendBucket,
     TrendSnapshot,
 )
-from strava_dashboard.domain.plan_models import Goal
+from garmin_dashboard.domain.plan_models import Goal
 
 NOW = datetime(2026, 8, 17, 8, tzinfo=UTC)
 

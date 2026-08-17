@@ -29,7 +29,7 @@ Make the repository understandable to a new operator and developer by separating
 Documentation facts will be checked against:
 
 - `compose.yaml`, `Dockerfile`, `.env.example`, and `scripts/garmin-auth.sh` for operations.
-- `pyproject.toml` and the `src/strava_dashboard` package for runtime dependencies and structure.
+- `pyproject.toml` and the `../../../src/garmin_dashboard` package for runtime dependencies and structure.
 - FastAPI route modules and Pydantic response models for endpoint contracts.
 - Existing tests for supported behavior and error cases.
 

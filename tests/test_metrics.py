@@ -2,7 +2,7 @@ from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
 
-from strava_dashboard.application.metrics import (
+from garmin_dashboard.application.metrics import (
     daily_summaries,
     rolling_training_load,
     summarize_health,
@@ -10,8 +10,8 @@ from strava_dashboard.application.metrics import (
     summarize_trends,
     trend_direction,
 )
-from strava_dashboard.application.race_analysis import select_preceding_block
-from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession, TrainingSummary
+from garmin_dashboard.application.race_analysis import select_preceding_block
+from garmin_dashboard.domain.models import Activity, RecoverySignal, SleepSession, TrainingSummary
 
 BASE = datetime(2026, 8, 16, 6, tzinfo=UTC)
 

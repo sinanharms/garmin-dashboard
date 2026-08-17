@@ -3,9 +3,9 @@ from typing import get_args, get_type_hints
 
 
 def test_ports_expose_replaceable_protocols() -> None:
-    from strava_dashboard.ports.coach import CoachProvider
-    from strava_dashboard.ports.garmin import GarminDataSource
-    from strava_dashboard.ports.storage import (
+    from garmin_dashboard.ports.coach import CoachProvider
+    from garmin_dashboard.ports.garmin import GarminDataSource
+    from garmin_dashboard.ports.storage import (
         ActivityStore,
         BackupStore,
         GoalStore,
@@ -33,8 +33,8 @@ def test_ports_expose_replaceable_protocols() -> None:
 
 
 def test_storage_ports_own_their_cursor_family() -> None:
-    from strava_dashboard.domain.models import ActivityCursor, RecoveryCursor, SleepCursor
-    from strava_dashboard.ports.storage import ActivityStore, RecoveryStore, SleepStore
+    from garmin_dashboard.domain.models import ActivityCursor, RecoveryCursor, SleepCursor
+    from garmin_dashboard.ports.storage import ActivityStore, RecoveryStore, SleepStore
 
     assert ActivityCursor in get_args(get_type_hints(ActivityStore.cursor)["return"])
     assert get_type_hints(ActivityStore.upsert_batch)["cursor"] is ActivityCursor
@@ -47,11 +47,11 @@ def test_storage_ports_own_their_cursor_family() -> None:
 def test_domain_and_ports_have_no_provider_or_storage_imports() -> None:
     project_root = Path(__file__).parents[1]
     files = (
-        project_root / "src/strava_dashboard/domain/models.py",
-        project_root / "src/strava_dashboard/domain/plan_models.py",
-        project_root / "src/strava_dashboard/ports/garmin.py",
-        project_root / "src/strava_dashboard/ports/storage.py",
-        project_root / "src/strava_dashboard/ports/coach.py",
+        project_root / "src/garmin_dashboard/domain/models.py",
+        project_root / "src/garmin_dashboard/domain/plan_models.py",
+        project_root / "src/garmin_dashboard/ports/garmin.py",
+        project_root / "src/garmin_dashboard/ports/storage.py",
+        project_root / "src/garmin_dashboard/ports/coach.py",
     )
     forbidden = ("fastapi", "sqlite", "mcp", "openai", "anthropic")
 

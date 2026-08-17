@@ -12,7 +12,7 @@ Use Compose as the primary workflow:
 docker compose config --quiet
 docker compose up --build
 docker compose run --rm app bash scripts/garmin-auth.sh
-docker compose run --rm scheduler uv run python -m strava_dashboard.worker
+docker compose run --rm scheduler uv run python -m garmin_dashboard.worker
 ```
 
 The runtime image copies application sources but not `tests/`. Containerized test runs therefore mount the repository test directory read-only:

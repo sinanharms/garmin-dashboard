@@ -5,9 +5,9 @@ from typing import Any, cast
 
 import pytest
 
-from strava_dashboard.adapters.garmin_mcp.mapping import GarminDataError
-from strava_dashboard.application.sync import SyncService
-from strava_dashboard.domain.models import (
+from garmin_dashboard.adapters.garmin_mcp.mapping import GarminDataError
+from garmin_dashboard.application.sync import SyncService
+from garmin_dashboard.domain.models import (
     Activity,
     ActivityCursor,
     RecoveryCursor,
@@ -17,7 +17,7 @@ from strava_dashboard.domain.models import (
     SyncRun,
     SyncWindow,
 )
-from strava_dashboard.ports.storage import StorageError
+from garmin_dashboard.ports.storage import StorageError
 
 BASE = datetime(2026, 8, 16, 6, tzinfo=UTC)
 

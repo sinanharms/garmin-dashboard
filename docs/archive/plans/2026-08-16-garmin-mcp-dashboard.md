@@ -29,7 +29,7 @@
 
 ## Scope and file map
 
-The repository is currently a minimal `src` package with one smoke test and no runtime application. Keep the existing `strava_dashboard` import path stable to avoid an unnecessary package migration, but remove source-provider behavior and update the project description to Garmin.
+The repository is currently a minimal `src` package with one smoke test and no runtime application. Keep the existing `garmin_dashboard` import path stable to avoid an unnecessary package migration, but remove source-provider behavior and update the project description to Garmin.
 
 Create this focused structure:
 
@@ -219,7 +219,7 @@ Use one application image with separate `app` and `scheduler` commands. Mount SQ
 services:
   app:
     build: .
-    command: uv run uvicorn strava_dashboard.api.app:app --host 0.0.0.0 --port 8000
+    command: uv run uvicorn garmin_dashboard.api.app:app --host 0.0.0.0 --port 8000
     env_file: .env
     environment:
       GARMIN_TOKEN_DIR: /var/lib/garminconnect
@@ -237,7 +237,7 @@ services:
 
   scheduler:
     build: .
-    command: uv run python -m strava_dashboard.worker
+    command: uv run python -m garmin_dashboard.worker
     env_file: .env
     environment:
       GARMIN_TOKEN_DIR: /var/lib/garminconnect
@@ -265,11 +265,11 @@ Run `git status --short`, stage only Task 1 files, then run `git commit -m "buil
 ## Task 2: Define domain models and replaceable ports
 
 **Files:**
-- Create: `src/strava_dashboard/domain/models.py`
-- Create: `src/strava_dashboard/domain/plan_models.py`
-- Create: `src/strava_dashboard/ports/garmin.py`
-- Create: `src/strava_dashboard/ports/storage.py`
-- Create: `src/strava_dashboard/ports/coach.py`
+- Create: `../../../src/garmin_dashboard/domain/models.py`
+- Create: `../../../src/garmin_dashboard/domain/plan_models.py`
+- Create: `../../../src/garmin_dashboard/ports/garmin.py`
+- Create: `../../../src/garmin_dashboard/ports/storage.py`
+- Create: `../../../src/garmin_dashboard/ports/coach.py`
 - Create: `tests/test_domain_models.py`
 - Create: `tests/conftest.py`
 
@@ -395,9 +395,9 @@ Run `docker compose run --rm app uv run pytest tests/test_domain_models.py -q`. 
 ## Task 3: Build the Garmin MCP stdio adapter
 
 **Files:**
-- Create: `src/strava_dashboard/adapters/garmin_mcp/session.py`
-- Create: `src/strava_dashboard/adapters/garmin_mcp/mapping.py`
-- Create: `src/strava_dashboard/adapters/garmin_mcp/adapter.py`
+- Create: `../../../src/garmin_dashboard/adapters/garmin_mcp/session.py`
+- Create: `../../../src/garmin_dashboard/adapters/garmin_mcp/mapping.py`
+- Create: `../../../src/garmin_dashboard/adapters/garmin_mcp/adapter.py`
 - Create: `tests/fixtures/garmin_activity.json`
 - Create: `tests/fixtures/garmin_sleep.json`
 - Create: `tests/fixtures/garmin_recovery.json`
@@ -450,13 +450,13 @@ Run `docker compose run --rm app uv run pytest tests/test_garmin_mcp_adapter.py 
 ## Task 4: Implement the SQLite adapter behind storage ports
 
 **Files:**
-- Create: `src/strava_dashboard/adapters/sqlite/connection.py`
-- Create: `src/strava_dashboard/adapters/sqlite/schema.py`
-- Create: `src/strava_dashboard/adapters/sqlite/activity_store.py`
-- Create: `src/strava_dashboard/adapters/sqlite/sleep_store.py`
-- Create: `src/strava_dashboard/adapters/sqlite/recovery_store.py`
-- Create: `src/strava_dashboard/adapters/sqlite/planning_store.py`
-- Create: `src/strava_dashboard/adapters/sqlite/sync_store.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/connection.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/schema.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/activity_store.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/sleep_store.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/recovery_store.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/planning_store.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/sync_store.py`
 - Create: `tests/contracts/test_storage_contract.py`
 - Create: `tests/test_sqlite_stores.py`
 
@@ -496,9 +496,9 @@ Stage only SQLite adapter and storage tests. Commit with `git commit -m "feat: a
 ## Task 5: Implement synchronization and scheduler orchestration
 
 **Files:**
-- Create: `src/strava_dashboard/application/sync.py`
-- Create: `src/strava_dashboard/adapters/sqlite/sync_store.py` implementation additions if needed
-- Create: `src/strava_dashboard/worker.py`
+- Create: `../../../src/garmin_dashboard/application/sync.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/sync_store.py` implementation additions if needed
+- Create: `../../../src/garmin_dashboard/worker.py`
 - Create: `tests/test_sync.py`
 
 **Interfaces:**
@@ -541,8 +541,8 @@ Run `docker compose run --rm app uv run pytest tests/test_sync.py -q`. Expected:
 ## Task 6: Add metrics and race-block analysis
 
 **Files:**
-- Create: `src/strava_dashboard/application/metrics.py`
-- Create: `src/strava_dashboard/application/race_analysis.py`
+- Create: `../../../src/garmin_dashboard/application/metrics.py`
+- Create: `../../../src/garmin_dashboard/application/race_analysis.py`
 - Create: `tests/test_metrics.py`
 
 **Interfaces:**
@@ -583,9 +583,9 @@ Run `docker compose run --rm app uv run pytest tests/test_metrics.py -q`. Expect
 ## Task 7: Add goals, plan validation, and the coach port
 
 **Files:**
-- Modify: `src/strava_dashboard/domain/plan_models.py`
-- Create: `src/strava_dashboard/application/planning.py`
-- Create: `src/strava_dashboard/ports/coach.py`
+- Modify: `../../../src/garmin_dashboard/domain/plan_models.py`
+- Create: `../../../src/garmin_dashboard/application/planning.py`
+- Create: `../../../src/garmin_dashboard/ports/coach.py`
 - Create: `tests/test_planning.py`
 
 **Interfaces:**
@@ -622,11 +622,11 @@ Run `docker compose run --rm app uv run pytest tests/test_planning.py -q`. Expec
 ## Task 8: Add application API and provisional dashboard delivery
 
 **Files:**
-- Create: `src/strava_dashboard/application/dashboard.py`
-- Create: `src/strava_dashboard/api/app.py`
-- Create: `src/strava_dashboard/api/dependencies.py`
-- Create: `src/strava_dashboard/api/routes_dashboard.py`
-- Create: `src/strava_dashboard/api/routes_dev.py`
+- Create: `../../../src/garmin_dashboard/application/dashboard.py`
+- Create: `../../../src/garmin_dashboard/api/app.py`
+- Create: `../../../src/garmin_dashboard/api/dependencies.py`
+- Create: `../../../src/garmin_dashboard/api/routes_dashboard.py`
+- Create: `../../../src/garmin_dashboard/api/routes_dev.py`
 - Create: `tests/test_api.py`
 
 **Interfaces:**
@@ -666,8 +666,8 @@ Run `docker compose run --rm app uv run pytest tests/test_api.py -q`. Expected: 
 ## Task 9: Add backups, health reporting, and Garmin bootstrap operations
 
 **Files:**
-- Create: `src/strava_dashboard/adapters/sqlite/backup.py`
-- Create: `src/strava_dashboard/application/operations.py`
+- Create: `../../../src/garmin_dashboard/adapters/sqlite/backup.py`
+- Create: `../../../src/garmin_dashboard/application/operations.py`
 - Create: `scripts/garmin-auth.sh`
 - Create: `tests/test_operations.py`
 - Modify: `README.md`

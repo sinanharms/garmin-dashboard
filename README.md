@@ -69,7 +69,7 @@ curl --fail http://127.0.0.1:8000/api/dev/storage/health
 Run a manual sync with the scheduler image and environment:
 
 ```bash
-docker compose run --rm scheduler uv run python -m strava_dashboard.worker
+docker compose run --rm scheduler uv run python -m garmin_dashboard.worker
 ```
 
 Create a compressed SQLite backup through the local operations endpoint:
@@ -85,9 +85,9 @@ docker compose stop app scheduler
 docker compose run --rm app uv run python -c '
 from datetime import UTC, datetime
 
-from strava_dashboard.adapters.sqlite.backup import SQLiteBackupStore
-from strava_dashboard.adapters.sqlite.connection import open_connection
-from strava_dashboard.config import Settings
+from garmin_dashboard.adapters.sqlite.backup import SQLiteBackupStore
+from garmin_dashboard.adapters.sqlite.connection import open_connection
+from garmin_dashboard.config import Settings
 
 settings = Settings()
 connection = open_connection(settings.database_path)

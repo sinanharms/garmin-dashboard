@@ -541,8 +541,8 @@ git commit -m "feat: expand dashboard cards with trend history"
 ### Task 6: Serve the React build from FastAPI and Docker
 
 **Files:**
-- Create: `src/strava_dashboard/api/static/app/.gitkeep`
-- Modify: `src/strava_dashboard/api/app.py`
+- Create: `../../../src/garmin_dashboard/api/static/app/.gitkeep`
+- Modify: `../../../src/garmin_dashboard/api/app.py`
 - Modify: `Dockerfile`
 - Modify: `.dockerignore`
 - Modify: `tests/test_api.py`
@@ -593,7 +593,7 @@ Add `frontend/node_modules`, `frontend/dist`, and `frontend/.vite` to `.dockerig
 
 - [ ] **Step 5: Remove provisional delivery assets and update README.**
 
-Only after the React build is copied into the final image, delete `src/strava_dashboard/api/templates/index.html`, `dashboard.js`, and `dashboard.css`. Update README setup with the Docker build path and state that the browser UI is served by FastAPI from the built frontend.
+Only after the React build is copied into the final image, delete `../../../src/garmin_dashboard/api/templates/index.html`, `dashboard.js`, and `dashboard.css`. Update README setup with the Docker build path and state that the browser UI is served by FastAPI from the built frontend.
 
 - [ ] **Step 6: Run serving and Compose checks.**
 
@@ -609,8 +609,8 @@ Expected: Compose config is valid, the app image builds the React bundle, API te
 - [ ] **Step 7: Commit production integration.**
 
 ```bash
-git add Dockerfile .dockerignore README.md src/strava_dashboard/api/app.py src/strava_dashboard/api/static/app tests/test_api.py
-git rm src/strava_dashboard/api/templates/index.html src/strava_dashboard/api/static/dashboard.js src/strava_dashboard/api/static/dashboard.css
+git add Dockerfile .dockerignore README.md src/garmin_dashboard/api/app.py src/garmin_dashboard/api/static/app tests/test_api.py
+git rm src/garmin_dashboard/api/templates/index.html src/garmin_dashboard/api/static/dashboard.js src/garmin_dashboard/api/static/dashboard.css
 git commit -m "feat: serve React dashboard from FastAPI"
 ```
 

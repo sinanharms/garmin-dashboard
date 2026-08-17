@@ -7,9 +7,9 @@ from typing import cast
 
 import pytest
 
-from strava_dashboard import worker
-from strava_dashboard.config import Settings
-from strava_dashboard.domain.models import SyncRun
+from garmin_dashboard import worker
+from garmin_dashboard.config import Settings
+from garmin_dashboard.domain.models import SyncRun
 
 
 class FakeService:

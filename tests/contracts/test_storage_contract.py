@@ -6,7 +6,7 @@ from typing import Protocol, cast
 
 import pytest
 
-from strava_dashboard.domain.models import (
+from garmin_dashboard.domain.models import (
     Activity,
     ActivityCursor,
     RecoveryCursor,
@@ -14,7 +14,7 @@ from strava_dashboard.domain.models import (
     SleepCursor,
     SleepSession,
 )
-from strava_dashboard.ports.storage import ActivityStore, RecoveryStore, SleepStore
+from garmin_dashboard.ports.storage import ActivityStore, RecoveryStore, SleepStore
 
 
 class StorageBundle(Protocol):
