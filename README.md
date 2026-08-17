@@ -2,7 +2,7 @@
 
 Personal, single-user Garmin training dashboard. It imports activities, sleep, and recovery data through the Garmin MCP stdio server, stores normalized records in SQLite, and serves a local FastAPI dashboard.
 
-Current web UI is a small static HTML/JavaScript dashboard. A React redesign is specified but not implemented; see [planned work](docs/specs/2026-08-17-react-dashboard-redesign-design.md).
+Current web UI is a small static HTML/JavaScript dashboard. A React redesign is specified but not implemented; see [planned work](docs/stories/react-dashboard.md).
 
 ## Quick start
 
@@ -138,11 +138,11 @@ src/strava_dashboard/
 
 Additional references:
 
-- [Architecture](docs/architecture.md): runtime components, data flow, persistence, and security boundaries.
-- [API reference](docs/api.md): HTTP routes, query parameters, response fields, and errors.
-- [Documentation design](docs/specs/2026-08-17-documentation-refresh-design.md): scope and source-of-truth rules for this documentation.
-- [Garmin dashboard implementation plan](docs/plans/2026-08-16-garmin-mcp-dashboard.md): original implementation plan.
-- [React redesign design](docs/specs/2026-08-17-react-dashboard-redesign-design.md): future frontend direction.
+- [Documentation index](docs/INDEX.md): canonical navigation for architecture, stories, APIs, conventions, and decisions.
+- [Architecture](docs/architecture/overview.md): runtime components, data flow, persistence, and deployment.
+- [API reference](docs/api/application.md): HTTP routes, query parameters, response fields, and errors.
+- [Open questions](docs/decisions/open-questions.md): unresolved differences between source and approved designs.
+- [Historical source](docs/archive/): original specifications and implementation plans.
 
 ## Contributing
 
