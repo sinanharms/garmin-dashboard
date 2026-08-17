@@ -1,10 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { getTrends } from "../../api/client";
 import type { DashboardView } from "../../api/types";
 import { DashboardPage } from "./DashboardPage";
 
 const useDashboard = vi.fn();
 vi.mock("./useDashboard", () => ({ useDashboard: () => useDashboard() }));
+vi.mock("../../api/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../api/client")>()),
+  getTrends: vi.fn(),
+}));
+
+const mockedGetTrends = vi.mocked(getTrends);
 
 const view: DashboardView = {
   generated_at: "2026-08-17T08:00:00Z",
@@ -36,5 +44,34 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("Dashboard unavailable")).toBeVisible();
     expect(screen.queryByText("private response body")).not.toBeInTheDocument();
+  });
+
+  it("loads weekly history inline for one expanded metric", async () => {
+    const user = userEvent.setup();
+    let resolveTrend: (value: Parameters<typeof mockedGetTrends.mockResolvedValue>[0]) => void;
+    useDashboard.mockReturnValue({ status: "success", data: view, retry: vi.fn() });
+    mockedGetTrends.mockImplementationOnce(() => new Promise((resolve) => { resolveTrend = resolve; }));
+    render(<DashboardPage />);
+
+    await user.click(screen.getByRole("button", { name: /training load/i }));
+
+    expect(mockedGetTrends.mock.calls[0]?.[0]).toEqual({ start: "2026-08-10", end: "2026-08-17", bucket: "week" });
+    expect(screen.getByText("Loading trend history…")).toBeVisible();
+    resolveTrend!({ start: view.training.start, end: view.training.end, bucket: "week", training: [{ ...view.training, training_load: 50 }, view.training], health: [] });
+    await waitFor(() => expect(screen.getByRole("img", { name: "Training load trend" })).toBeVisible());
+    expect(screen.getByText("60")).toBeVisible();
+  });
+
+  it("keeps summary visible when detail request fails", async () => {
+    const user = userEvent.setup();
+    useDashboard.mockReturnValue({ status: "success", data: view, retry: vi.fn() });
+    mockedGetTrends.mockRejectedValue(new Error("request failed"));
+    render(<DashboardPage />);
+
+    await user.click(screen.getByRole("button", { name: /training load/i }));
+    await user.selectOptions(screen.getByLabelText("Trend period"), "month");
+
+    await waitFor(() => expect(screen.getByText("Trend history unavailable. Collapse and expand to retry.")).toBeVisible());
+    expect(screen.getByText("60")).toBeVisible();
   });
 });

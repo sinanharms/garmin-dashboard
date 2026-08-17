@@ -9,9 +9,10 @@ export class ApiError extends Error {
   }
 }
 
-async function requestJson<T>(url: string, failureMessage: string): Promise<T> {
+async function requestJson<T>(url: string, failureMessage: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
+    signal,
   });
 
   if (!response.ok) {
@@ -26,7 +27,7 @@ export function getDashboard(today?: string): Promise<DashboardView> {
   return requestJson<DashboardView>(`/api/dashboard${query}`, "Dashboard request failed");
 }
 
-export function getTrends(query: TrendQuery): Promise<TrendSnapshot> {
+export function getTrends(query: TrendQuery, signal?: AbortSignal): Promise<TrendSnapshot> {
   const params = new URLSearchParams({
     start: query.start,
     end: query.end,
@@ -34,6 +35,6 @@ export function getTrends(query: TrendQuery): Promise<TrendSnapshot> {
   });
   return requestJson<TrendSnapshot>(
     `/api/dashboard/trends?${params.toString()}`,
-    "Trends request failed",
+    "Trends request failed", signal,
   );
 }
