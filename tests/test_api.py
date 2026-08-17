@@ -137,6 +137,20 @@ def test_dashboard_trends_uses_typed_query_parameters() -> None:
     assert response.json()["bucket"] == "month"
 
 
+def test_dashboard_trends_rejects_equal_dates_at_route_boundary() -> None:
+    response = client().get("/api/dashboard/trends?start=2026-08-17&end=2026-08-17")
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "start must be before end"}
+
+
+def test_dashboard_trends_rejects_inverted_dates_at_route_boundary() -> None:
+    response = client().get("/api/dashboard/trends?start=2026-08-18&end=2026-08-17")
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "start must be before end"}
+
+
 def test_six_read_only_inspection_endpoints_are_available_and_redacted() -> None:
     api = client()
     paths = (
@@ -185,8 +199,20 @@ def test_dashboard_shell_isolated_from_api_and_static_assets() -> None:
 
     page = api.get("/")
     stylesheet = api.get("/static/dashboard.css")
+    script = api.get("/static/dashboard.js")
 
     assert page.status_code == 200
     assert "Garmin Training Dashboard" in page.text
     assert "/api/dashboard" in page.text
     assert stylesheet.status_code == 200
+    assert script.status_code == 200
+    assert 'id="weekly-plan-content"' in page.text
+    assert 'id="sleep-detail"' in page.text
+    assert 'id="recovery-detail"' in page.text
+    for field in ("health_status", "average_sleep_seconds", "average_sleep_score", "recovery_metrics"):
+        assert field in script.text
+    assert "proposal.week_start" in script.text
+    assert "proposal?.workouts" in script.text
+    assert "Weekly plan unavailable" in script.text
+    assert "Sleep: unavailable" in script.text
+    assert "Recovery: unavailable" in script.text

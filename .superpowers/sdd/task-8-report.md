@@ -12,13 +12,14 @@ Implemented the read-only dashboard query service, FastAPI application boundary,
 - Storage failures and unexpected route errors return stable redacted messages rather than raw exception text.
 - Production wiring is isolated in the FastAPI lifespan composition root; test fakes are constructor-injected.
 - The homepage, CSS, and dashboard script are isolated under `api/templates` and `api/static` for later dashboard redesign.
+- The dashboard trend route rejects equal or inverted date ranges with a stable 422 response before calling the service.
+- The provisional shell renders weekly plan/workout details and separate sleep/recovery details, including explicit unavailable states.
 - All API/application data models use frozen, `extra="forbid"` Pydantic models; no dataclasses were introduced.
 
 ## TDD and verification
 
-- Red: `uv run pytest tests/test_api.py -q` failed during collection because the API package did not exist.
-- Green: `uv run pytest tests/test_api.py -q` — 7 passed.
-- Full suite: `uv run pytest -q` — 126 passed.
+- Review-fix regression tests: `uv run pytest tests/test_api.py -q` — 9 passed.
+- Full suite: `uv run pytest -q` — 128 passed.
 - Ruff check — passed.
 - Ruff format check — passed.
 - `uv run ty check .` — passed.

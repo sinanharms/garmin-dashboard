@@ -10,7 +10,20 @@
     <main>
       <h1>Garmin Training Dashboard</h1>
       <p id="health-status">Loading health status…</p>
-      <section id="dashboard" data-api="/api/dashboard" aria-live="polite">Loading dashboard…</section>
+      <section id="dashboard" data-api="/api/dashboard" aria-live="polite">
+        <p id="fitness-summary">Loading fitness…</p>
+        <p id="goal-summary">Loading goal…</p>
+        <section id="weekly-plan" aria-labelledby="weekly-plan-heading">
+          <h2 id="weekly-plan-heading">Weekly plan</h2>
+          <p id="weekly-plan-content">Loading weekly plan…</p>
+        </section>
+        <section id="health-detail" aria-labelledby="health-heading">
+          <h2 id="health-heading">Sleep and recovery</h2>
+          <p id="sleep-detail">Loading sleep…</p>
+          <p id="recovery-detail">Loading recovery…</p>
+        </section>
+        <p id="recent-activities">Loading recent activities…</p>
+      </section>
     </main>
     <script src="/static/dashboard.js"></script>
   </body>

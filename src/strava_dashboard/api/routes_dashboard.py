@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from strava_dashboard.api.dependencies import DashboardQuery, get_dashboard_service
 from strava_dashboard.application.dashboard import DashboardView
@@ -26,4 +26,6 @@ def dashboard_trends(
     end: date,
     bucket: Annotated[TrendBucket, Query()] = TrendBucket.WEEK,
 ) -> TrendSnapshot:
+    if end <= start:
+        raise HTTPException(status_code=422, detail="start must be before end")
     return service.trends(start, end, bucket)
