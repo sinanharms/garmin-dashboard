@@ -14,6 +14,10 @@ from strava_dashboard.domain.models import (
 from strava_dashboard.domain.plan_models import Goal, ValidatedPlan
 
 
+class StorageError(RuntimeError):
+    """Raised when a storage adapter cannot complete an atomic operation."""
+
+
 class ActivityStore(Protocol):
     def cursor(self) -> ActivityCursor | None: ...
 

@@ -1,7 +1,9 @@
+import sqlite3
 from collections.abc import Sequence
 from datetime import datetime
 
 from strava_dashboard.domain.models import SleepCursor, SleepSession
+from strava_dashboard.ports.storage import StorageError
 
 from ._common import SQLiteStore, cursor_for, date_text, parse_timestamp, save_cursor, timestamp_text
 
@@ -11,10 +13,11 @@ class SQLiteSleepStore(SQLiteStore):
         return cursor_for(self.connection, "sleep", SleepCursor)
 
     def upsert_batch(self, records: Sequence[SleepSession], cursor: SleepCursor) -> int:
-        with self.connection:
-            for record in records:
-                self.connection.execute(
-                    """
+        try:
+            with self.connection:
+                for record in records:
+                    self.connection.execute(
+                        """
                     INSERT INTO sleep_sessions(
                         external_id, started_at, ended_at, local_date, duration_seconds, score
                     ) VALUES (?, ?, ?, ?, ?, ?)
@@ -25,16 +28,18 @@ class SQLiteSleepStore(SQLiteStore):
                         duration_seconds = excluded.duration_seconds,
                         score = excluded.score
                     """,
-                    (
-                        record.external_id,
-                        timestamp_text(record.started_at),
-                        timestamp_text(record.ended_at),
-                        date_text(record.local_date),
-                        record.duration_seconds,
-                        record.score,
-                    ),
-                )
-            save_cursor(self.connection, "sleep", cursor)
+                        (
+                            record.external_id,
+                            timestamp_text(record.started_at),
+                            timestamp_text(record.ended_at),
+                            date_text(record.local_date),
+                            record.duration_seconds,
+                            record.score,
+                        ),
+                    )
+                save_cursor(self.connection, "sleep", cursor)
+        except sqlite3.Error as error:
+            raise StorageError("SQLite sleep write failed") from error
         return len(records)
 
     def between(self, start: datetime, end: datetime) -> tuple[SleepSession, ...]:

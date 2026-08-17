@@ -10,8 +10,10 @@ from typing import Protocol, cast
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
+from strava_dashboard.ports.garmin import GarminSourceError
 
-class McpSessionError(RuntimeError):
+
+class McpSessionError(GarminSourceError):
     """Raised when MCP transport or tool execution fails."""
 
 

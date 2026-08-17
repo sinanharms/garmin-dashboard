@@ -1,7 +1,9 @@
+import sqlite3
 from collections.abc import Sequence
 from datetime import datetime
 
 from strava_dashboard.domain.models import RecoveryCursor, RecoverySignal
+from strava_dashboard.ports.storage import StorageError
 
 from ._common import SQLiteStore, cursor_for, date_text, parse_timestamp, save_cursor, timestamp_text
 
@@ -11,10 +13,11 @@ class SQLiteRecoveryStore(SQLiteStore):
         return cursor_for(self.connection, "recovery", RecoveryCursor)
 
     def upsert_batch(self, records: Sequence[RecoverySignal], cursor: RecoveryCursor) -> int:
-        with self.connection:
-            for record in records:
-                self.connection.execute(
-                    """
+        try:
+            with self.connection:
+                for record in records:
+                    self.connection.execute(
+                        """
                     INSERT INTO recovery_signals(
                         external_id, local_date, measured_at, metric_name, value, unit
                     ) VALUES (?, ?, ?, ?, ?, ?)
@@ -25,16 +28,18 @@ class SQLiteRecoveryStore(SQLiteStore):
                         value = excluded.value,
                         unit = excluded.unit
                     """,
-                    (
-                        record.external_id,
-                        date_text(record.local_date),
-                        timestamp_text(record.measured_at),
-                        record.metric_name,
-                        record.value,
-                        record.unit,
-                    ),
-                )
-            save_cursor(self.connection, "recovery", cursor)
+                        (
+                            record.external_id,
+                            date_text(record.local_date),
+                            timestamp_text(record.measured_at),
+                            record.metric_name,
+                            record.value,
+                            record.unit,
+                        ),
+                    )
+                save_cursor(self.connection, "recovery", cursor)
+        except sqlite3.Error as error:
+            raise StorageError("SQLite recovery write failed") from error
         return len(records)
 
     def between(self, start: datetime, end: datetime) -> tuple[RecoverySignal, ...]:

@@ -5,6 +5,7 @@ from typing import Literal, cast
 from pydantic import BaseModel, ConfigDict
 
 from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession
+from strava_dashboard.ports.garmin import GarminSourceError
 
 # Discovered through official ClientSession.initialize() + list_tools(). Exact
 # output lives in tests/fixtures/garmin_mcp_list_tools_schema.json. At this
@@ -66,7 +67,7 @@ SLEEP_TOOL = SLEEP_CONTRACT.name
 HRV_TOOL = HRV_CONTRACT.name
 
 
-class GarminDataError(RuntimeError):
+class GarminDataError(GarminSourceError):
     """Raised when Garmin MCP data cannot become a domain model."""
 
 

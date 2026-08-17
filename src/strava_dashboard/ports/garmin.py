@@ -4,6 +4,10 @@ from typing import Protocol
 from strava_dashboard.domain.models import Activity, RecoverySignal, SleepSession, SyncWindow
 
 
+class GarminSourceError(RuntimeError):
+    """Raised when a Garmin source cannot return validated domain records."""
+
+
 class GarminDataSource(Protocol):
     async def fetch_activities(self, window: SyncWindow) -> Sequence[Activity]: ...
 
