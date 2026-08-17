@@ -32,3 +32,26 @@ Commands were run from `/Users/sinan/Developer/strava-dashboard` using the exist
 `failed to connect to the docker API at unix:///Users/sinan/.docker/run/docker.sock: ... connect: no such file or directory`
 
 Direct `uv run` was also unavailable because uv could not initialize `/Users/sinan/.cache/uv` under the sandbox. Equivalent checks passed through the existing project virtualenv.
+
+## Review fixes
+
+- Replaced the single-shot schema initializer with a sequential migration runner.
+- Added fresh/legacy upgrade and unsupported-future-version tests.
+- Moved the SQLite storage factory into test fixtures so the contract assertions are backend-agnostic.
+- Added parameterized sleep/recovery round-trip, ordering, and record-plus-cursor rollback coverage.
+
+Final verification after review fixes:
+
+```text
+rtk uv run pytest -q
+89 passed in 0.51s
+
+rtk uv run ruff format --check .
+32 files already formatted
+
+rtk uv run ruff check .
+All checks passed!
+
+rtk uv run ty check .
+All checks passed!
+```

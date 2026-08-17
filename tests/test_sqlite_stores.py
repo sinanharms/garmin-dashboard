@@ -1,7 +1,11 @@
+import sqlite3
 from datetime import UTC, date, datetime, timedelta
+
+import pytest
 
 from strava_dashboard.adapters.sqlite.connection import open_connection
 from strava_dashboard.adapters.sqlite.planning_store import SQLiteGoalStore, SQLitePlanStore
+from strava_dashboard.adapters.sqlite.schema import SCHEMA_VERSION, apply_schema
 from strava_dashboard.adapters.sqlite.sync_store import SQLiteSyncRunStore
 from strava_dashboard.domain.models import SyncRun, SyncStageResult
 from strava_dashboard.domain.plan_models import Goal, PlanProposal, ValidatedPlan, Workout
@@ -14,8 +18,41 @@ def test_connection_applies_required_sqlite_pragmas(tmp_path) -> None:
     assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
     assert connection.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
     assert connection.execute("PRAGMA busy_timeout").fetchone()[0] > 0
-    assert connection.execute("SELECT version FROM schema_version").fetchone()[0] == 1
+    assert connection.execute("SELECT version FROM schema_version").fetchone()[0] == SCHEMA_VERSION
 
+    connection.close()
+
+
+def test_legacy_schema_upgrades_sequentially_without_losing_data(tmp_path) -> None:
+    database = tmp_path / "legacy.sqlite"
+    connection = sqlite3.connect(database)
+    connection.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+    connection.execute("INSERT INTO schema_version(version) VALUES (0)")
+    connection.execute("CREATE TABLE legacy_records (external_id TEXT PRIMARY KEY)")
+    connection.execute("INSERT INTO legacy_records(external_id) VALUES ('legacy-activity')")
+    connection.commit()
+
+    apply_schema(connection)
+
+    assert connection.execute("SELECT version FROM schema_version").fetchone()[0] == SCHEMA_VERSION
+    assert connection.execute("SELECT external_id FROM legacy_records").fetchone()[0] == "legacy-activity"
+    assert connection.execute("SELECT name FROM sqlite_master WHERE name = 'activities'").fetchone()[0] == "activities"
+    connection.close()
+
+
+def test_future_schema_version_fails_without_destructive_changes(tmp_path) -> None:
+    connection = sqlite3.connect(tmp_path / "future.sqlite")
+    connection.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+    connection.execute("INSERT INTO schema_version(version) VALUES (?)", (SCHEMA_VERSION + 1,))
+    connection.execute("CREATE TABLE sentinel (value TEXT NOT NULL)")
+    connection.execute("INSERT INTO sentinel(value) VALUES ('preserve-me')")
+    connection.commit()
+
+    with pytest.raises(RuntimeError, match="Unsupported SQLite schema version"):
+        apply_schema(connection)
+
+    assert connection.execute("SELECT version FROM schema_version").fetchone()[0] == SCHEMA_VERSION + 1
+    assert connection.execute("SELECT value FROM sentinel").fetchone()[0] == "preserve-me"
     connection.close()
 
 
