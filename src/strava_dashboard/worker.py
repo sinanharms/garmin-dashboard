@@ -52,7 +52,7 @@ async def run_once(settings: Settings) -> SyncRun:
 
 
 def main() -> int:
-    run = asyncio.run(run_once(Settings()))  # ty: ignore[missing-argument]
+    run = asyncio.run(run_once(Settings()))
     return 0 if all(stage.status == "succeeded" for stage in run.stages) else 1
 
 

@@ -69,7 +69,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        services = injected or build_production_services(settings or Settings())  # ty: ignore[missing-argument]
+        services = injected or build_production_services(settings or Settings())
         application.state.services = services
         try:
             yield

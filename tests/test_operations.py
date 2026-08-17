@@ -208,7 +208,7 @@ def test_operation_models_reject_extra_fields_and_are_immutable(tmp_path: Path) 
     with pytest.raises(ValidationError):
         report.__class__.model_validate({**report.model_dump(), "extra_field": "rejected"})
     with pytest.raises(ValidationError):
-        report.status = "degraded"  # type: ignore[misc]
+        report.status = "degraded"  # type: ignore
     database.close()
 
 

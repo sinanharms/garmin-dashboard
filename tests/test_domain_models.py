@@ -174,7 +174,7 @@ def test_domain_records_share_frozen_extra_forbid_pydantic_config(utc_now: datet
     assert record.model_config["frozen"] is True
     assert record.model_config["extra"] == "forbid"
     with pytest.raises(ValidationError):
-        record.duration_seconds = 1
+        record.duration_seconds = 1  # ty: ignore[invalid-assignment]
     with pytest.raises(ValidationError):
         Activity.model_validate({**record.model_dump(), "unexpected": "value"})
 
