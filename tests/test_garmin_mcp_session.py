@@ -16,7 +16,7 @@ from strava_dashboard.adapters.garmin_mcp.session import McpSessionError, StdioM
 
 class FakeSdkSession:
     response: object = SimpleNamespace(is_error=False, content=[], structured_content={"ok": True})
-    initialize_error: Exception | None = None
+    initialize_error: BaseException | None = None
     close_error: Exception | None = None
     captured: dict[str, Any]
 
@@ -146,6 +146,20 @@ def test_startup_error_wins_when_cleanup_also_fails(monkeypatch: pytest.MonkeyPa
     assert str(error.value) == "MCP session startup failed"
     assert error.value.__cause__ is initialize_error
     assert "RAW-CLEANUP-ERROR" not in "".join(traceback.format_exception(error.value))
+    assert captured["transport_closed"]
+
+
+def test_startup_cancellation_closes_transport_and_preserves_cancellation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    captured: dict[str, Any] = {}
+    install_stdio_fakes(monkeypatch, captured)
+    FakeSdkSession.initialize_error = asyncio.CancelledError()
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(StdioMcpSessionFactory("garmin-mcp", tmp_path / "tokens", 30).open())
+
+    assert captured["sdk_closed"]
     assert captured["transport_closed"]
 
 

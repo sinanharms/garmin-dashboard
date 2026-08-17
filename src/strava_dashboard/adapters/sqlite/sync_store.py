@@ -26,7 +26,8 @@ class SQLiteSyncRunStore(SQLiteStore):
 
     def get(self, run_id: str) -> SyncRun | None:
         try:
-            row = self.connection.execute("SELECT * FROM sync_runs WHERE run_id = ?", (run_id,)).fetchone()
+            with self.connection.locked():
+                row = self.connection.execute("SELECT * FROM sync_runs WHERE run_id = ?", (run_id,)).fetchone()
         except sqlite3.Error as error:
             raise StorageError("SQLite sync-run read failed") from error
         return None if row is None else self._model_from_row(row)
@@ -34,9 +35,10 @@ class SQLiteSyncRunStore(SQLiteStore):
     def recent(self, limit: int) -> tuple[SyncRun, ...]:
         bounded_limit = require_limit(limit)
         try:
-            rows = self.connection.execute(
-                "SELECT * FROM sync_runs ORDER BY started_at DESC, run_id DESC LIMIT ?", (bounded_limit,)
-            ).fetchall()
+            with self.connection.locked():
+                rows = self.connection.execute(
+                    "SELECT * FROM sync_runs ORDER BY started_at DESC, run_id DESC LIMIT ?", (bounded_limit,)
+                ).fetchall()
         except sqlite3.Error as error:
             raise StorageError("SQLite sync-run read failed") from error
         return tuple(self._model_from_row(row) for row in rows)

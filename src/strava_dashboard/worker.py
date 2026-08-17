@@ -1,11 +1,10 @@
 import asyncio
-import sqlite3
 from datetime import UTC, datetime, timedelta
 
 from strava_dashboard.adapters.garmin_mcp.adapter import GarminMcpAdapter
 from strava_dashboard.adapters.garmin_mcp.session import StdioMcpSessionFactory
 from strava_dashboard.adapters.sqlite.activity_store import SQLiteActivityStore
-from strava_dashboard.adapters.sqlite.connection import open_connection
+from strava_dashboard.adapters.sqlite.connection import SQLiteConnection, open_connection
 from strava_dashboard.adapters.sqlite.recovery_store import SQLiteRecoveryStore
 from strava_dashboard.adapters.sqlite.sleep_store import SQLiteSleepStore
 from strava_dashboard.adapters.sqlite.sync_store import SQLiteSyncRunStore
@@ -14,7 +13,7 @@ from strava_dashboard.config import Settings
 from strava_dashboard.domain.models import SyncRun, SyncWindow
 
 
-def build_sync_service(settings: Settings, connection: sqlite3.Connection | None = None) -> SyncService:
+def build_sync_service(settings: Settings, connection: SQLiteConnection | None = None) -> SyncService:
     owns_connection = connection is None
     database = connection if connection is not None else open_connection(settings.database_path)
     try:

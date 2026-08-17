@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from strava_dashboard.adapters.sqlite.connection import SQLiteConnection
 from strava_dashboard.config import Settings
 from strava_dashboard.ports.backups import is_generated_backup_id
 from strava_dashboard.ports.storage import BackupStore, StorageError
@@ -60,7 +61,7 @@ class OperationsService:
     def __init__(
         self,
         settings: Settings,
-        connection: sqlite3.Connection,
+        connection: SQLiteConnection,
         backup_store: BackupStore,
         clock: Callable[[], datetime],
     ) -> None:
@@ -92,7 +93,8 @@ class OperationsService:
 
     def _database_health(self) -> DatabaseHealth:
         try:
-            self._connection.execute("SELECT 1").fetchone()
+            with self._connection.locked():
+                self._connection.execute("SELECT 1").fetchone()
             size = self._settings.database_path.stat().st_size if self._settings.database_path.exists() else 0
             return DatabaseHealth(status="ok", size_bytes=size)
         except OSError, sqlite3.Error:

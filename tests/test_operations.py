@@ -9,7 +9,7 @@ from pydantic import SecretStr, ValidationError
 
 from strava_dashboard.adapters.sqlite import backup as backup_module
 from strava_dashboard.adapters.sqlite.backup import SQLiteBackupStore
-from strava_dashboard.adapters.sqlite.connection import open_connection
+from strava_dashboard.adapters.sqlite.connection import SQLiteConnection, open_connection
 from strava_dashboard.application.operations import OperationsService
 from strava_dashboard.config import Settings
 from strava_dashboard.ports.storage import StorageError
@@ -31,7 +31,7 @@ def settings(tmp_path: Path, retention_days: int = 30) -> Settings:
     )
 
 
-def create_store(tmp_path: Path, clock=lambda: NOW) -> tuple[sqlite3.Connection, SQLiteBackupStore]:
+def create_store(tmp_path: Path, clock=lambda: NOW) -> tuple[SQLiteConnection, SQLiteBackupStore]:
     database = open_connection(tmp_path / "dashboard.sqlite3")
     database.execute("CREATE TABLE IF NOT EXISTS sentinel (value TEXT NOT NULL)")
     database.execute("INSERT INTO sentinel(value) VALUES ('preserve-me')")

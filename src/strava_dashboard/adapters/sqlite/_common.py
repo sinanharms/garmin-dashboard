@@ -10,13 +10,15 @@ from strava_dashboard.domain.models import (
 )
 from strava_dashboard.ports.storage import StorageError
 
+from .connection import SQLiteConnection
+
 
 class SQLiteStore:
-    def __init__(self, connection: sqlite3.Connection) -> None:
+    def __init__(self, connection: SQLiteConnection) -> None:
         self._connection = connection
 
     @property
-    def connection(self) -> sqlite3.Connection:
+    def connection(self) -> SQLiteConnection:
         return self._connection
 
 
@@ -34,10 +36,11 @@ def parse_timestamp(value: str) -> datetime:
 
 
 def cursor_for[CursorType: (ActivityCursor, SleepCursor, RecoveryCursor)](
-    connection: sqlite3.Connection, family: DataFamily, cursor_type: type[CursorType]
+    connection: SQLiteConnection, family: DataFamily, cursor_type: type[CursorType]
 ) -> CursorType | None:
     try:
-        row = connection.execute("SELECT watermark FROM sync_cursors WHERE data_family = ?", (family,)).fetchone()
+        with connection.locked():
+            row = connection.execute("SELECT watermark FROM sync_cursors WHERE data_family = ?", (family,)).fetchone()
     except sqlite3.Error as error:
         raise StorageError("SQLite cursor read failed") from error
     if row is None:
@@ -46,16 +49,17 @@ def cursor_for[CursorType: (ActivityCursor, SleepCursor, RecoveryCursor)](
 
 
 def save_cursor[CursorType: (ActivityCursor, SleepCursor, RecoveryCursor)](
-    connection: sqlite3.Connection, family: DataFamily, cursor: CursorType
+    connection: SQLiteConnection, family: DataFamily, cursor: CursorType
 ) -> None:
-    connection.execute(
-        """
-        INSERT INTO sync_cursors(data_family, watermark) VALUES (?, ?)
-        ON CONFLICT(data_family) DO UPDATE SET watermark = excluded.watermark
-        WHERE excluded.watermark > sync_cursors.watermark
-        """,
-        (family, timestamp_text(cursor.watermark)),
-    )
+    with connection.locked():
+        connection.execute(
+            """
+            INSERT INTO sync_cursors(data_family, watermark) VALUES (?, ?)
+            ON CONFLICT(data_family) DO UPDATE SET watermark = excluded.watermark
+            WHERE excluded.watermark > sync_cursors.watermark
+            """,
+            (family, timestamp_text(cursor.watermark)),
+        )
 
 
 def date_text(value: date) -> str:

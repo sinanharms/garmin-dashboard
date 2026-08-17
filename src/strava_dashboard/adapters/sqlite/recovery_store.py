@@ -44,14 +44,15 @@ class SQLiteRecoveryStore(SQLiteStore):
 
     def between(self, start: datetime, end: datetime) -> tuple[RecoverySignal, ...]:
         try:
-            rows = self.connection.execute(
-                """
-                SELECT * FROM recovery_signals
-                WHERE measured_at >= ? AND measured_at < ?
-                ORDER BY measured_at ASC, external_id ASC
-                """,
-                (timestamp_text(start), timestamp_text(end)),
-            ).fetchall()
+            with self.connection.locked():
+                rows = self.connection.execute(
+                    """
+                    SELECT * FROM recovery_signals
+                    WHERE measured_at >= ? AND measured_at < ?
+                    ORDER BY measured_at ASC, external_id ASC
+                    """,
+                    (timestamp_text(start), timestamp_text(end)),
+                ).fetchall()
         except sqlite3.Error as error:
             raise StorageError("SQLite recovery read failed") from error
         return tuple(

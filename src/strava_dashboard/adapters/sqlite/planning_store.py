@@ -22,7 +22,8 @@ class SQLiteGoalStore(SQLiteStore):
 
     def current(self) -> Goal | None:
         try:
-            row = self.connection.execute("SELECT * FROM goals ORDER BY target_date ASC, goal_id ASC LIMIT 1").fetchone()
+            with self.connection.locked():
+                row = self.connection.execute("SELECT * FROM goals ORDER BY target_date ASC, goal_id ASC LIMIT 1").fetchone()
         except sqlite3.Error as error:
             raise StorageError("SQLite goal read failed") from error
         if row is None:
@@ -67,16 +68,20 @@ class SQLitePlanStore(SQLiteStore):
 
     def current(self) -> ValidatedPlan | None:
         try:
-            row = self.connection.execute("SELECT * FROM plans ORDER BY validated_at DESC, proposal_id DESC LIMIT 1").fetchone()
+            with self.connection.locked():
+                row = self.connection.execute(
+                    "SELECT * FROM plans ORDER BY validated_at DESC, proposal_id DESC LIMIT 1"
+                ).fetchone()
         except sqlite3.Error as error:
             raise StorageError("SQLite plan read failed") from error
         if row is None:
             return None
         try:
-            workouts = self.connection.execute(
-                "SELECT * FROM plan_workouts WHERE proposal_id = ? ORDER BY scheduled_date ASC, workout_id ASC",
-                (row["proposal_id"],),
-            ).fetchall()
+            with self.connection.locked():
+                workouts = self.connection.execute(
+                    "SELECT * FROM plan_workouts WHERE proposal_id = ? ORDER BY scheduled_date ASC, workout_id ASC",
+                    (row["proposal_id"],),
+                ).fetchall()
         except sqlite3.Error as error:
             raise StorageError("SQLite plan workout read failed") from error
         proposal = PlanProposal(

@@ -11,13 +11,15 @@ from uuid import uuid4
 from strava_dashboard.ports.backups import is_generated_backup_id
 from strava_dashboard.ports.storage import BackupStore, StorageError
 
+from .connection import SQLiteConnection
+
 BACKUP_SUFFIX = ".sqlite3.gz"
 
 
 class SQLiteBackupStore(BackupStore):
     def __init__(
         self,
-        connection: sqlite3.Connection,
+        connection: SQLiteConnection,
         backup_dir: Path,
         retention_count: int,
         retention_days: int,
@@ -32,6 +34,10 @@ class SQLiteBackupStore(BackupStore):
         self._clock = clock
 
     def create(self) -> str:
+        with self._connection.locked():
+            return self._create_locked()
+
+    def _create_locked(self) -> str:
         backup_id = self._backup_id()
         plain_path: Path | None = None
         compressed_path: Path | None = None
@@ -57,11 +63,12 @@ class SQLiteBackupStore(BackupStore):
         temporary_path: Path | None = None
         source: sqlite3.Connection | None = None
         try:
-            temporary_path = self._temporary_path(backup_id, ".restore.tmp")
-            with gzip.open(backup_path, "rb") as compressed, temporary_path.open("wb") as restored:
-                shutil.copyfileobj(compressed, restored)
-            source = sqlite3.connect(temporary_path)
-            source.backup(self._connection)
+            with self._connection.locked():
+                temporary_path = self._temporary_path(backup_id, ".restore.tmp")
+                with gzip.open(backup_path, "rb") as compressed, temporary_path.open("wb") as restored:
+                    shutil.copyfileobj(compressed, restored)
+                source = sqlite3.connect(temporary_path)
+                self._connection.restore_from(source)
         except (OSError, sqlite3.Error, gzip.BadGzipFile) as error:
             raise StorageError("SQLite restore failed") from error
         finally:

@@ -45,11 +45,18 @@ class StdioMcpSessionFactory:
             sdk_session = await stack.enter_async_context(ClientSession(read_stream, write_stream))
             await sdk_session.initialize()
             return _SdkMcpSession(stack, sdk_session, self._timeout_seconds)
+        except asyncio.CancelledError:
+            await _close_startup_stack(stack)
+            raise
         except Exception as error:
             startup_error = McpSessionError("MCP session startup failed")
-            with suppress(Exception):
-                await stack.aclose()
+            await _close_startup_stack(stack)
             raise startup_error from error
+
+
+async def _close_startup_stack(stack: AsyncExitStack) -> None:
+    with suppress(BaseException):
+        await stack.aclose()
 
 
 class _SdkMcpSession:
