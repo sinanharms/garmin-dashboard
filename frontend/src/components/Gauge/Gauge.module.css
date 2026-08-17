@@ -1,0 +1,12 @@
+.gauge { align-items: center; display: inline-grid; justify-items: center; position: relative; }
+.visual { height: 10rem; transform: rotate(-90deg); width: 10rem; }
+.track, .arc { fill: none; stroke-width: 8; }
+.track { stroke: var(--color-border); }
+.arc { stroke-linecap: round; transition: stroke-dashoffset 240ms ease; }
+.text { align-items: center; display: flex; flex-direction: column; inset: 0; justify-content: center; position: absolute; }
+.text strong { color: var(--color-text); font-size: 2rem; }
+.text span { color: var(--color-muted); font-size: 0.75rem; text-transform: uppercase; }
+
+@media (prefers-reduced-motion: reduce) {
+  .arc { transition: none; }
+}

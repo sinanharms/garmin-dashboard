@@ -1,0 +1,24 @@
+.badge {
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 700;
+  gap: 0.4rem;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.55rem;
+  text-transform: uppercase;
+}
+
+.dot {
+  background: currentColor;
+  border-radius: 50%;
+  height: 0.4rem;
+  width: 0.4rem;
+}
+
+.available { color: var(--color-success); }
+.missing, .error { color: var(--color-danger); }
+.stale { color: var(--color-warning); }
+.loading { color: var(--color-muted); }
