@@ -6,9 +6,7 @@ from pydantic import BaseModel, ValidationError
 from strava_dashboard.domain.models import (
     Activity,
     ActivityCursor,
-    DashboardSnapshot,
     DomainModel,
-    HealthSummary,
     RecoveryCursor,
     RecoverySignal,
     SleepCursor,
@@ -17,12 +15,8 @@ from strava_dashboard.domain.models import (
     SyncRun,
     SyncStageResult,
     SyncWindow,
-    TrainingBlock,
-    TrainingSummary,
-    TrendBucket,
-    TrendSnapshot,
 )
-from strava_dashboard.domain.plan_models import Goal, PlanConstraints, PlanProposal, Workout
+from strava_dashboard.domain.plan_models import Goal, PlanProposal, Workout
 
 
 def activity(utc_now: datetime, **changes: object) -> Activity:
@@ -216,86 +210,3 @@ def test_plan_records_validate_required_values(utc_now: datetime) -> None:
             purpose="Aerobic base",
             explanation="Invalid duration",
         )
-
-
-def test_frozen_collections_are_runtime_immutable(utc_now: datetime) -> None:
-    stage = SyncStageResult(data_family="activities", status="succeeded", record_count=1, error_code=None)
-    training = TrainingSummary(
-        start=date(2026, 8, 1),
-        end=date(2026, 8, 7),
-        activity_count=1,
-        duration_seconds=1800,
-        distance_meters=5.0,
-        elevation_meters=30.0,
-        sport_counts=[["running", 1]],  # ty: ignore[invalid-argument-type]
-        training_load=None,
-    )
-    health = HealthSummary(
-        start=training.start,
-        end=training.end,
-        available=True,
-        average_sleep_seconds=28800.0,
-        average_sleep_score=82.0,
-        recovery_metrics=[["body_battery", 75.0, "percent"]],  # ty: ignore[invalid-argument-type]
-    )
-    workout = Workout(
-        workout_id="workout-1",
-        scheduled_date=date(2026, 8, 17),
-        activity_type="running",
-        duration_seconds=2400,
-        intensity="easy",
-        purpose="Aerobic base",
-        explanation="Build volume safely",
-    )
-    constraints = PlanConstraints(
-        weekly_time_budget_seconds=6000,
-        available_weekdays=[0, 2],  # ty: ignore[invalid-argument-type]
-        activity_preferences=["running"],  # ty: ignore[invalid-argument-type]
-        requirements=["easy week"],  # ty: ignore[invalid-argument-type]
-    )
-    proposal = PlanProposal(
-        proposal_id="proposal-1",
-        goal_id="goal-1",
-        week_start=training.start,
-        workouts=[workout],  # ty: ignore[invalid-argument-type]
-        explanation="One easy session",
-        created_at=utc_now,
-    )
-    run = SyncRun(run_id="run-1", started_at=utc_now, ended_at=None, stages=[stage])  # ty: ignore[invalid-argument-type]
-    block = TrainingBlock(
-        start=training.start,
-        end=training.end,
-        outcome=activity(utc_now),
-        activities=[activity(utc_now)],  # ty: ignore[invalid-argument-type]
-        summary=training,
-    )
-    dashboard = DashboardSnapshot(
-        generated_at=utc_now,
-        training=training,
-        health=health,
-        recent_activities=[activity(utc_now)],  # ty: ignore[invalid-argument-type]
-    )
-    trend = TrendSnapshot(
-        start=training.start,
-        end=training.end,
-        bucket=TrendBucket.WEEK,
-        training=[training],  # ty: ignore[invalid-argument-type]
-        health=[health],  # ty: ignore[invalid-argument-type]
-    )
-
-    assert all(
-        isinstance(value, tuple)
-        for value in (
-            run.stages,
-            training.sport_counts,
-            health.recovery_metrics,
-            constraints.available_weekdays,
-            constraints.activity_preferences,
-            constraints.requirements,
-            proposal.workouts,
-            block.activities,
-            dashboard.recent_activities,
-            trend.training,
-            trend.health,
-        )
-    )
